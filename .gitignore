@@ -1,0 +1,16 @@
+# Dependensi
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Log
+*.log
+
+# File lokal
+.env
+.env.local
+supabase/.temp/

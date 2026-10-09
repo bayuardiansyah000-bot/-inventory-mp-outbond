@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Inventory MP Outbond</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@0.451.0/dist/umd/lucide.min.js"></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'><i data-lucide="package"></i></text></svg>" />
+<link rel="stylesheet" href="css/style.css?v=19" />
+</head>
+
+
+
+<div id="login-screen">
+<div class="login-card">
+<div class="login-brand">
+<div class="login-logo"><i data-lucide="package"></i></div>
+<h1>Inventory MP Outbond</h1>
+<p>Sistem Manajemen Gudang</p>
+</div>
+<div class="login-error" id="login-error" hidden>
+  <span><i data-lucide="alert-triangle"></i></span><span id="login-error-msg">Username atau password salah.</span>
+</div>
+<form id="login-form" autocomplete="off">
+<div class="login-field">
+<label for="login-user">Username</label>
+<input type="text" id="login-user" placeholder="Masukkan username" autocomplete="username" required />
+</div>
+<div class="login-field">
+<label for="login-pass">Password</label>
+<input type="password" id="login-pass" placeholder="Masukkan password" autocomplete="current-password" required />
+<button type="button" class="toggle-pwd" id="toggle-pwd" title="Tampilkan password"><i data-lucide="eye"></i></button>
+</div>
+<button type="submit" class="login-btn" id="login-btn">Masuk</button>
+</form>
+<div class="login-footer">Sesi login berakhir otomatis setelah <b>8 jam</b></div>
+</div>
+</div>
+
+<div id="dashboard">
+<div class="app-shell" id="app-shell">
+<div class="sb-backdrop" id="sb-backdrop"></div>
+
+<aside class="sidebar" id="sidebar">
+<div class="sb-brand">
+<div class="sb-logo"><i data-lucide="package"></i></div>
+<div class="sb-brand-text">
+<div class="sb-brand-title">Inventory</div>
+<div class="sb-brand-sub">MP Outbond</div>
+</div>
+<button class="sb-collapse" id="sb-collapse" title="Kecilkan sidebar"><i data-lucide="chevron-left"></i></button>
+</div>
+
+<nav class="sb-nav" id="sb-nav">
+<button class="sb-item" data-tab="beranda" aria-selected="true"><i data-lucide="home"></i><span>Beranda</span></button>
+<button class="sb-item" data-tab="transaksi" aria-selected="false"><i data-lucide="clipboard-list"></i><span>Transaksi Gudang</span></button>
+<button class="sb-item" data-tab="pembelian" aria-selected="false"><i data-lucide="shopping-cart"></i><span>Pembelian</span></button>
+<button class="sb-item" data-tab="vendor" aria-selected="false"><i data-lucide="building-2"></i><span>Vendor &amp; Barang</span></button>
+<button class="sb-item" data-tab="pic" aria-selected="false"><i data-lucide="user"></i><span>PIC</span></button>
+<button class="sb-item" data-tab="laporan" aria-selected="false"><i data-lucide="bar-chart-3"></i><span>Laporan</span></button>
+<button class="sb-item" data-tab="petunjuk" aria-selected="false"><i data-lucide="book-open"></i><span>Petunjuk & Fitur</span></button>
+</nav>
+
+<div class="sb-sep"></div>
+<div class="sb-foot">
+<button class="sb-item" id="sb-theme"><i data-lucide="moon" id="sb-theme-icon"></i><span id="sb-theme-label">Dark Mode</span></button>
+<button class="sb-item danger" id="sb-logout"><i data-lucide="log-out"></i><span>Logout</span></button>
+</div>
+</aside>
+
+<main class="main-area">
+<header class="top">
+<button class="sb-toggle" id="sb-toggle" title="Menu"><i data-lucide="menu"></i></button>
+<div class="title-wrap">
+<div class="brand">Inventory · MP Outbond</div>
+<h1 id="page-title">Beranda</h1>
+</div>
+<div class="right">
+<div class="global-search-wrap">
+<input type="text" class="global-search" id="global-search" placeholder="Cari SJ, invoice, vendor, barang..." readonly />
+</div>
+<div class="clock"><div id="clock-date"></div><div class="time mono" id="clock-time"></div></div>
+<div class="user-menu">
+<button class="user-menu-btn" id="user-menu-btn" aria-expanded="false">
+<div class="avatar" id="user-avatar">?</div>
+<div>
+<div class="name" id="user-name">—</div>
+<div class="role"><span id="user-role">—</span><span class="role-badge-mini" id="user-role-badge"></span></div>
+</div>
+<span class="chev">▼</span>
+</button>
+<div class="user-dropdown" id="user-dropdown" hidden>
+<div class="dd-head"><div class="who" id="dd-who">—</div><div class="role-txt" id="dd-role">—</div></div>
+<button class="dd-item" id="dd-manage-users" hidden><span class="ico"><i data-lucide="users"></i></span><span>Kelola User</span></button>
+<button class="dd-item" id="dd-audit"><span class="ico"><i data-lucide="scroll-text"></i></span><span>Audit Log</span></button>
+<button class="dd-item" id="dd-change-pwd"><span class="ico"><i data-lucide="lock"></i></span><span>Ubah Password Saya</span></button>
+<div class="dd-sep"></div>
+<button class="dd-item danger" id="dd-logout"><span class="ico"><i data-lucide="log-out"></i></span><span>Logout</span></button>
+</div>
+</div>
+</div>
+</header>
+
+<section class="panel" id="panel-beranda" role="tabpanel">
+<div class="alert-banner" id="alert-banner" hidden><div class="ico" id="alert-ico"><i data-lucide="alert-triangle"></i></div><div style="flex:1;"><div class="title" id="alert-title"></div><div class="desc" id="alert-desc"></div></div></div>
+<div class="stok-grid" id="stok-grid"></div>
+<div class="lihat-semua-row" id="lihat-semua-row" hidden><button class="btn-lihat-semua" id="btn-lihat-semua" type="button">Lihat semua <span class="count" id="lihat-semua-count">0</span> barang <span style="color:var(--ink-faint);">→</span></button></div>
+<div class="row-2col">
+<div class="section" style="margin-bottom:0;">
+<div class="section-title"><span class="st-main"><i data-lucide="bar-chart-3"></i> Pengambilan per Barang</span><div class="chart-toggle" id="chart-toggle"><button type="button" data-days="7">7 hari</button><button type="button" data-days="14" aria-selected="true">14 hari</button><button type="button" data-days="30">30 hari</button></div></div>
+<div class="section-sub">Total qty yang keluar dari gudang dalam periode terpilih.</div>
+<div class="chart-wrap"><canvas id="chart-barang"></canvas></div>
+</div>
+<div class="section" style="margin-bottom:0;">
+<div class="section-title"><span class="st-main"><i data-lucide="trophy"></i> Top Paling Sering Keluar</span></div>
+<div class="section-sub">Berdasarkan frekuensi transaksi OUT (14 hari terakhir).</div>
+<div class="leader-list" id="leader-list"></div>
+<div class="leader-foot" id="leader-foot" hidden><span>Top 5 · Total <span class="total" id="leader-total">0× keluar</span> semua barang</span><span class="link" id="leader-link">Lihat laporan →</span></div>
+</div>
+</div>
+<div class="section" style="margin-bottom:20px;">
+<div class="section-title"><span class="st-main"><i data-lucide="trending-up"></i> Trend Stok</span><div class="chart-toggle" id="trend-toggle"><button type="button" data-days="30" aria-selected="true">30 hari</button><button type="button" data-days="60">60 hari</button><button type="button" data-days="90">90 hari</button></div></div>
+<div class="section-sub">Pergerakan stok tiap barang dari waktu ke waktu — bantu lihat tren sebelum restock.</div>
+<div class="chart-wrap" style="height:280px;"><canvas id="chart-trend"></canvas></div>
+</div>
+<div class="row-2col even" style="margin-bottom:0;">
+<div class="section" style="margin-bottom:0;">
+<div class="section-title"><span class="st-main"><i data-lucide="clock"></i> Aktivitas Terbaru</span></div>
+<div class="section-sub">5 transaksi gudang paling akhir.</div>
+<div class="feed" id="feed"></div>
+</div>
+<div class="tagihan-col"><div class="tagihan-card">
+<div class="label"><i data-lucide="banknote"></i> Tagihan Berjalan</div>
+<div class="num" id="beranda-tagihan-num">0 tagihan</div>
+<div class="amt" id="beranda-tagihan-amt">Total Rp 0</div>
+<div class="tagihan-mini" id="beranda-tagihan-list"></div>
+<a class="link" id="go-pembelian">Lihat detail pembelian →</a>
+</div></div>
+</div>
+</section>
+
+<section class="panel" id="panel-transaksi" role="tabpanel" hidden>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="pencil-line"></i> Catat Transaksi Gudang</span></div>
+<div class="qs-wrap">
+  <div class="qs-label"><i data-lucide="package-search"></i><span>Stok Cepat</span></div>
+  <div class="qs-list" id="qs-list"></div>
+</div>
+<form id="form-transaksi" novalidate>
+<div class="form-inline">
+<div class="field"><label for="f-tanggal">Tanggal Transaksi</label><input type="date" id="f-tanggal" required /></div>
+<div class="field"><label for="f-jenis">Jenis Transaksi</label><select id="f-jenis"><option value="Masuk">IN</option><option value="Keluar" selected>OUT</option></select></div>
+<div class="field"><label for="f-barang">Barang</label><select id="f-barang" required></select></div>
+</div>
+<div class="form-inline" style="margin-top:14px;">
+<div class="field" id="f-bagian-wrap">
+<label for="f-bagian" style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:22px;"><span>Bagian Pemakaian</span><button type="button" class="btn btn-secondary btn-tiny" id="btn-kelola-bagian"><i data-lucide="settings"></i> Kelola</button></label>
+<select id="f-bagian"></select>
+</div>
+<div class="field"><label for="f-qty">QTY</label><input type="number" id="f-qty" min="1" step="1" required /></div>
+<div class="field"><label for="f-pic">PIC</label><select id="f-pic" required></select></div>
+</div>
+<div class="field" style="margin-top:16px;"><label for="f-ket">Keterangan</label><input type="text" id="f-ket" placeholder="Cth: Penyesuaian / Retur" /></div>
+<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;"><button type="submit" class="btn btn-primary" style="width:auto;padding:10px 28px;">Simpan Transaksi</button></div>
+</form>
+</div>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="scroll-text"></i> Riwayat Gudang</span><div class="table-toolbar">
+<span class="lbl">Periode:</span>
+<input type="date" id="f-riwayat-from" />
+<span style="color:var(--ink-faint);font-size:11px;">s/d</span>
+<input type="date" id="f-riwayat-to" />
+<div class="range-preset" id="range-preset"><button type="button" data-range="today" aria-selected="true">Hari ini</button><button type="button" data-range="7">7 hari</button><button type="button" data-range="30">30 hari</button></div>
+</div>
+<div class="table-toolbar" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
+<span class="lbl">Filter:</span>
+<select id="f-riwayat-jenis" class="filter-select"><option value="">Semua Tipe</option><option value="Masuk">IN (Masuk)</option><option value="Keluar">OUT (Keluar)</option></select>
+<select id="f-riwayat-barang" class="filter-select"><option value="">Semua Barang</option></select>
+<select id="f-riwayat-pic" class="filter-select"><option value="">Semua PIC</option></select>
+<select id="f-riwayat-bagian" class="filter-select"><option value="">Semua Bagian</option></select>
+<button class="btn btn-secondary btn-sm" id="btn-reset-filter" type="button" style="width:auto;">↻ Reset</button>
+</div>
+</div>
+<div class="table-wrap"><table class="data"><thead><tr><th data-sort="tanggal">Tgl</th><th>Kode</th><th data-sort="barang">Nama Barang</th><th data-sort="jenis">Tipe</th><th data-sort="qty" style="text-align:right">Qty</th><th>PIC</th><th>Ket</th><th>Aksi</th></tr></thead><tbody id="riwayat-body"></tbody></table></div>
+<div class="table-footer"><span id="riwayat-count"></span><div class="pager" id="riwayat-pager"></div></div>
+</div>
+</section>
+
+<section class="panel" id="panel-pembelian" role="tabpanel" hidden>
+
+<div class="section" style="padding:10px;">
+  <div class="sub-tabs" id="pembelian-tabs">
+    <button type="button" data-pb="terima" aria-selected="true"><i data-lucide="clipboard-list"></i> Terima Barang &amp; SJ</button>
+    <button type="button" data-pb="tagihan" aria-selected="false"><i data-lucide="hourglass"></i> Tagihan Berjalan<span class="count-badge" id="pembelian-tagihan-count" hidden>0</span></button>
+    <button type="button" data-pb="riwayat" aria-selected="false"><i data-lucide="check"></i> Riwayat Tagihan</button>
+  </div>
+</div>
+
+<div class="sub-panel" id="pb-terima">
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="clipboard-list"></i> Terima Barang &amp; Surat Jalan</span></div>
+<form id="form-fase1" novalidate>
+<div class="field-row">
+<div class="field"><label for="p-tgl">Tgl Barang Datang</label><input type="date" id="p-tgl" required /></div>
+<div class="field"><label for="p-vendor">Nama Vendor</label><select id="p-vendor" required><option value="">-- Pilih Vendor --</option></select></div>
+</div>
+<div class="field-row">
+<div class="field"><label for="p-sj">No. Surat Jalan</label><input type="text" id="p-sj" required /></div>
+<div class="field"><label for="p-foto">Upload Foto SJ (bisa pilih &gt;1 file)</label><input type="file" id="p-foto" accept="image/*,application/pdf" multiple /></div>
+</div>
+<div class="cart-box">
+<div class="cart-label">Daftar Barang Dalam Surat Jalan</div>
+<div id="cart-rows"></div>
+<button type="button" class="btn btn-ghost" id="btn-add-cart-row">+ Tambah Barang Lain</button>
+</div>
+<label class="checkbox-row"><input type="checkbox" id="p-autostock" checked /> Otomatis tambah Stok WMS untuk seluruh barang</label>
+<button type="submit" class="btn btn-primary">Simpan &amp; Upload Dokumen</button>
+</form>
+</div>
+</div>
+
+<div class="sub-panel" id="pb-tagihan" hidden>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="hourglass"></i> Tagihan Berjalan</span><div class="table-toolbar">
+<button class="btn btn-secondary btn-sm" id="btn-csv-berjalan" type="button"><i data-lucide="download"></i> CSV</button>
+<button class="btn btn-secondary btn-sm" id="btn-refresh-pembelian" type="button"><i data-lucide="refresh-cw"></i> Refresh</button>
+</div>
+</div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Surat Jalan</th><th>Vendor</th><th>Barang</th><th>Invoice &amp; Tgl</th><th>Total Tagihan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tagihan-berjalan-body"></tbody></table></div>
+<div class="table-footer"><span id="tagihan-berjalan-total"></span><span></span></div>
+</div>
+</div>
+
+<div class="sub-panel" id="pb-riwayat" hidden>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="check"></i> Riwayat Tagihan Selesai</span><div class="table-toolbar">
+<input type="text" id="riwayat-tagihan-search" placeholder="Cari SJ / Vendor / Invoice..." />
+<input type="month" id="riwayat-tagihan-bulan" />
+<button class="btn btn-secondary btn-sm" id="btn-csv-tagihan" type="button"><i data-lucide="download"></i> CSV</button>
+</div>
+</div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Surat Jalan</th><th>Vendor</th><th>Barang</th><th>Invoice &amp; Tgl</th><th>Total Tagihan</th><th>Tgl Pelunasan</th><th>Bukti Lunas</th><th>Aksi</th></tr></thead><tbody id="tagihan-selesai-body"></tbody></table></div>
+<div class="table-footer"><span id="tagihan-selesai-total"></span><span></span></div>
+</div>
+</div>
+</section>
+
+<section class="panel" id="panel-vendor" role="tabpanel" hidden>
+
+<div class="section" style="padding:10px;">
+  <div class="sub-tabs" id="vendor-tabs">
+    <button type="button" data-pv="vendor" aria-selected="true"><i data-lucide="building-2"></i> Vendor<span class="count-badge" id="pv-vendor-count" hidden>0</span></button>
+    <button type="button" data-pv="barang" aria-selected="false"><i data-lucide="package"></i> Master Barang<span class="count-badge" id="pv-barang-count" hidden>0</span></button>
+  </div>
+</div>
+
+<div class="sub-panel" id="pv-vendor">
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="building-2"></i> Tambah / Edit Vendor</span></div>
+<form id="form-vendor">
+<div class="form-inline" style="grid-template-columns:1fr 1.5fr;">
+<div class="field"><label for="v-kode">Kode Vendor <span style="color:var(--danger)">*</span></label><input type="text" id="v-kode" placeholder="Cth: NMS" style="text-transform:uppercase" required /></div>
+<div class="field"><label for="v-nama">Nama Vendor <span style="color:var(--danger)">*</span></label><input type="text" id="v-nama" placeholder="Cth: PT Niaga Mas Sukses" required /></div>
+</div>
+<div class="form-inline" style="grid-template-columns:1fr 1.5fr;margin-top:14px;">
+<div class="field"><label for="v-pic">PIC / Kontak</label><input type="text" id="v-pic" placeholder="Cth: IRWAN" /></div>
+<div class="field"><label for="v-hp">No. HP</label><input type="text" id="v-hp" placeholder="Cth: +62 812-xxxx-xxxx" /></div>
+</div>
+<div class="field" style="margin-top:14px;"><label for="v-alamat">Alamat</label><input type="text" id="v-alamat" placeholder="Alamat lengkap" /></div>
+<div class="field"><label for="v-ket">Jenis Barang / Produk yang Disuplai</label><input type="text" id="v-ket" placeholder="Cth: Lakban, Buble Wrap, Label Resi" /><div class="helper">Isi jenis barang/produk yang biasa dibeli dari vendor ini.</div></div>
+<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+<button type="submit" class="btn btn-primary" id="btn-vendor-save" style="width:auto;padding:10px 24px;">Simpan Vendor</button>
+<button type="button" class="btn btn-secondary" id="btn-vendor-reset" style="width:auto;">Reset</button>
+<span class="mode-badge" id="vendor-mode-hint"><i data-lucide="pencil-line"></i> Tambah Vendor Baru</span>
+</div>
+</form>
+</div>
+<div class="section">
+<div class="section-title">Daftar Vendor<input type="text" id="vendor-search" style="border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12px;background:var(--surface);width:auto;color:var(--ink);" placeholder="Cari kode/nama/PIC..." /></div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Kode</th><th>Nama Vendor</th><th>PIC / Kontak</th><th>No. HP</th><th>Alamat</th><th>Jenis Barang / Produk</th><th style="text-align:right">Aksi</th></tr></thead><tbody id="vendor-list"></tbody></table></div>
+</div>
+</div>
+
+<div class="sub-panel" id="pv-barang" hidden>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="package"></i> Master Barang</span><button class="btn btn-primary btn-sm" id="btn-kelola-barang-master" type="button" style="width:auto;"><i data-lucide="settings"></i> Kelola Barang</button></div>
+<div class="section-sub">Daftar semua jenis barang yang dipakai di gudang. Klik <b>Kelola Barang</b> untuk tambah / edit / ubah stok minimum.</div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Kode</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th style="text-align:right">Stok Awal</th><th style="text-align:right">Stok Min</th></tr></thead><tbody id="barang-master-list"></tbody></table></div>
+</div>
+</div>
+</section>
+
+<section class="panel" id="panel-pic" role="tabpanel" hidden>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="user"></i> Tambah / Edit PIC</span></div>
+<form id="form-pic">
+<div class="form-inline">
+<div class="field"><label for="pic-nama">Nama PIC <span style="color:var(--danger)">*</span></label><input type="text" id="pic-nama" placeholder="Cth: Budi Santoso" required /></div>
+<div class="field"><label for="pic-divisi">Divisi</label><input type="text" id="pic-divisi" placeholder="Cth: Gudang / Administrasi" /></div>
+<div class="field"><label for="pic-posisi">Posisi / Jabatan</label><input type="text" id="pic-posisi" placeholder="Cth: Operator / Supervisor" /></div>
+</div>
+<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+<button type="submit" class="btn btn-primary" id="btn-pic-save" style="width:auto;padding:10px 24px;">Simpan PIC</button>
+<button type="button" class="btn btn-secondary" id="btn-pic-reset" style="width:auto;">Reset</button>
+<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-muted);cursor:pointer;"><input type="checkbox" id="pic-aktif" checked style="width:auto;" />Aktif (bisa dipilih saat input transaksi)</label>
+<span class="mode-badge" id="pic-mode-hint"><i data-lucide="pencil-line"></i> Tambah PIC Baru</span>
+</div>
+</form>
+</div>
+<div class="section">
+<div class="section-title">Daftar PIC<input type="text" id="pic-search" style="border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12px;background:var(--surface);width:auto;color:var(--ink);" placeholder="Cari nama/divisi/posisi..." /></div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Nama</th><th>Divisi</th><th>Posisi / Jabatan</th><th style="text-align:center">Transaksi</th><th style="text-align:center">Status</th><th style="text-align:right">Aksi</th></tr></thead><tbody id="pic-list"></tbody></table></div>
+</div>
+</section>
+
+<section class="panel" id="panel-laporan" role="tabpanel" hidden>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="bar-chart-3"></i> Laporan Pemakaian per Periode</span></div>
+<div class="field-row" style="align-items:end;">
+<div class="field" style="margin-bottom:0;"><label for="l-dari">Dari Tanggal</label><input type="date" id="l-dari" /></div>
+<div class="field" style="margin-bottom:0;"><label for="l-sampai">Sampai Tanggal</label><input type="date" id="l-sampai" /></div>
+</div>
+<div style="margin-top:16px;">
+  <div style="font-size:11px;color:var(--ink-muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">Cepat Pilih:</div>
+  <div class="range-preset" id="laporan-preset" style="flex-wrap:wrap;">
+    <button type="button" data-lp="today">Hari ini</button>
+    <button type="button" data-lp="7">7 hari</button>
+    <button type="button" data-lp="30" aria-selected="true">30 hari</button>
+    <button type="button" data-lp="90">90 hari</button>
+    <button type="button" data-lp="month">Bulan ini</button>
+    <button type="button" data-lp="lastmonth">Bulan lalu</button>
+    <button type="button" data-lp="year">Tahun ini</button>
+  </div>
+</div>
+<button class="btn btn-primary" style="width:auto;margin-top:16px;padding:10px 24px;" id="btn-tampilkan">Tampilkan</button>
+<div class="sub" style="margin-top:10px;" id="laporan-hint">Pilih periode lalu klik Tampilkan.</div>
+<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-muted);cursor:pointer;margin-top:14px;"><input type="checkbox" id="l-compare" style="width:auto;" />Bandingkan dengan bulan kalender sebelumnya</label>
+</div>
+<div class="section">
+<div class="section-title">Rekap per Barang <button class="btn btn-secondary btn-sm" id="btn-csv-barang" type="button"><i data-lucide="download"></i> CSV Detail</button></div>
+<div id="rekap-compare-banner" class="cmp-banner" hidden></div>
+<div class="table-wrap"><table class="data"><thead><tr>
+<th>Barang</th>
+<th style="text-align:right">Masuk (IN)</th>
+<th style="text-align:right">Keluar (OUT)</th>
+<th style="text-align:right" title="Total OUT dibagi jumlah hari kalender dalam periode">Rata-rata OUT/Hari</th>
+<th id="th-cmp" style="text-align:right;display:none;">Δ vs Bulan Lalu</th>
+</tr></thead><tbody id="rekap-barang-body"></tbody></table></div>
+</div>
+<div class="section">
+<div class="section-title">Rekap per PIC (berdasarkan transaksi OUT)</div>
+<div class="table-wrap"><table class="data"><thead><tr>
+<th>PIC</th>
+<th>Divisi / Posisi</th>
+<th style="text-align:right">Jumlah Transaksi</th>
+<th style="text-align:right">Total Qty Keluar</th>
+<th id="th-cmp-pic" style="text-align:right;display:none;">Δ vs Bulan Lalu</th>
+</tr></thead><tbody id="rekap-pic-body"></tbody></table></div>
+</div>
+</section>
+<section class="panel" id="panel-petunjuk" role="tabpanel" hidden>
+
+<!-- === HEADER === -->
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="book-open"></i> Petunjuk Penggunaan Dashboard</span></div>
+<div class="section-sub">
+Selamat datang di <b>Inventory MP Outbond</b>. Halaman ini menjelaskan <b>semua tab</b> dan <b>semua fitur</b> yang tersedia. Baca singkat saja, atau langsung lompat ke bagian yang kamu butuhkan.
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;">
+<div style="background:var(--surface-raised);border:1px solid var(--line);border-radius:12px;padding:14px;">
+<div style="font-size:12px;font-weight:700;color:var(--steel-bright);margin-bottom:4px;"><i data-lucide="shield-check"></i> Login Awal</div>
+<div style="font-size:12px;color:var(--ink-muted);line-height:1.6;">Masuk pakai username & password yang diberikan Admin. Sesi otomatis berakhir setelah <b>8 jam</b>.</div>
+</div>
+<div style="background:var(--surface-raised);border:1px solid var(--line);border-radius:12px;padding:14px;">
+<div style="font-size:12px;font-weight:700;color:var(--steel-bright);margin-bottom:4px;"><i data-lucide="mouse-pointer"></i> Navigasi</div>
+<div style="font-size:12px;color:var(--ink-muted);line-height:1.6;">Klik menu di sidebar kiri untuk pindah tab. Klik <b>&lt;</b> di kanan logo untuk mengecilkan sidebar.</div>
+</div>
+<div style="background:var(--surface-raised);border:1px solid var(--line);border-radius:12px;padding:14px;">
+<div style="font-size:12px;font-weight:700;color:var(--steel-bright);margin-bottom:4px;"><i data-lucide="keyboard"></i> Shortcut</div>
+<div style="font-size:12px;color:var(--ink-muted);line-height:1.6;"><b>Ctrl + K</b> = buka pencarian global. <b>Esc</b> = tutup modal/dialog.</div>
+</div>
+<div style="background:var(--surface-raised);border:1px solid var(--line);border-radius:12px;padding:14px;">
+<div style="font-size:12px;font-weight:700;color:var(--steel-bright);margin-bottom:4px;"><i data-lucide="save"></i> Data Tersimpan</div>
+<div style="font-size:12px;color:var(--ink-muted);line-height:1.6;">User, preferensi tema, sidebar, dan audit log disimpan di browser. <b>Data transaksi masih di memori</b> — hilang kalau halaman di-refresh.</div>
+</div>
+</div>
+</div>
+<!-- === SUB-TAB NAV === -->
+<div class="section" style="padding:10px;">
+  <div class="sub-tabs" id="petunjuk-tabs">
+    <button type="button" data-pt="panduan" aria-selected="true"><i data-lucide="folder-open"></i> Panduan Per Tab</button>
+    <button type="button" data-pt="fitur" aria-selected="false"><i data-lucide="star"></i> Fitur Global</button>
+    <button type="button" data-pt="hitung" aria-selected="false"><i data-lucide="calculator"></i> Cara Perhitungan</button>
+    <button type="button" data-pt="tips" aria-selected="false"><i data-lucide="lightbulb"></i> Tips &amp; FAQ</button>
+    <button type="button" data-pt="glosarium" aria-selected="false"><i data-lucide="book-open"></i> Glosarium</button>
+  </div>
+</div>
+
+<!-- === SUB-PANEL: PANDUAN === -->
+<div class="sub-panel" id="pt-panduan">
+<!-- === PANDUAN PER TAB === -->
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="folder-open"></i> Panduan Per Tab</span></div>
+
+<!-- 1. BERANDA -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="home"></i> Beranda</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Ringkasan harian kondisi gudang. Berisi:
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Banner Restock</b> — daftar barang yang stoknya di bawah minimum. Kalau tidak ada, tampil hijau "Semua stok aman".</li>
+<li><b>Kartu Stok</b> — 6 barang prioritas. Tiap kartu berisi: nama, stok saat ini, badge <span class="badge badge-warn" style="font-size:10px;">RESTOCK</span>/<span class="badge badge-good" style="font-size:10px;">AMAN</span>, sparkline 7 hari, rata-rata pemakaian/hari, dan estimasi umur stok.</li>
+<li><b>Lihat Semua</b> — tombol untuk buka modal berisi semua barang.</li>
+<li><b>Grafik Pengambilan</b> — bar chart qty keluar per barang, bisa pilih 7/14/30 hari.</li>
+<li><b>Top Paling Sering Keluar</b> — 5 barang dengan frekuensi OUT tertinggi dalam 14 hari.</li>
+<li><b>Trend Stok</b> — line chart pergerakan stok 30/60/90 hari. Bantu lihat barang mana yang menurun cepat.</li>
+<li><b>Aktivitas Terbaru</b> — 5 transaksi terakhir.</li>
+<li><b>Tagihan Berjalan</b> — ringkasan SJ yang belum lunas.</li>
+</ul>
+</div>
+</div>
+
+<!-- 2. TRANSAKSI GUDANG -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="pencil-line"></i> Transaksi Gudang</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Tempat mencatat barang <b>masuk</b> (IN) dan <b>keluar</b> (OUT).
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Form Transaksi</b> — isi: Tanggal, Jenis (IN/OUT), Barang, Bagian Pemakaian (khusus OUT), QTY, PIC, Keterangan.</li>
+<li>Sistem akan <b>blokir transaksi OUT</b> kalau stok tidak cukup.</li>
+<li><b>Riwayat Gudang</b> — tabel semua transaksi. Bisa di-filter berdasarkan periode, tipe, barang, PIC, dan bagian. Klik kolom judul untuk urutkan (sort).</li>
+<li>Tombol <b>Edit</b> dan <b>Hapus</b> ada di kolom Aksi. Khusus Operator, Hapus tidak tersedia.</li>
+<li><b>Kelola Bagian</b> — tombol <i data-lucide="settings"></i> di form untuk tambah/ubah nama bagian pemakaian.</li>
+</ul>
+</div>
+</div>
+
+<!-- 3. PEMBELIAN -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="clipboard-list"></i> Pembelian</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Terima Barang</b> — input: tanggal, vendor, no. SJ, upload foto SJ, daftar barang + qty.</li>
+<li>Centang <b>Otomatis tambah stok</b> supaya stok WMS langsung bertambah begitu SJ disimpan.</li>
+<li><b>Tagihan Berjalan</b> — SJ yang belum lunas. Statusnya bertahap:
+  <ul style="margin:4px 0 0 16px;">
+  <li><span style="display:inline-block;width:9px;height:9px;border-radius:999px;background:#F97316;margin-right:6px;"></span>Menunggu Invoice</li>
+  <li><span style="display:inline-block;width:9px;height:9px;border-radius:999px;background:#3B82F6;margin-right:6px;"></span>Invoice Masuk - Proses Finance</li>
+  <li><span style="display:inline-block;width:9px;height:9px;border-radius:999px;background:#EAB308;margin-right:6px;"></span>Di Finance - Belum Lunas</li>
+  </ul>
+</li>
+<li>Alurnya: <b>+ Input Invoice</b> → <b>→ Kirim ke Finance</b> → <b>Tandai Lunas</b> (upload bukti).</li>
+<li><b>Riwayat Tagihan Selesai</b> — SJ yang sudah lunas, bisa dicari & difilter per bulan.</li>
+</ul>
+</div>
+</div>
+
+<!-- 4. VENDOR & BARANG -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="building-2"></i> Vendor &amp; Barang</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Tambah / Edit Vendor</b> — isi kode, nama, PIC, HP, alamat. Klik <b>Edit</b> pada tabel vendor → form otomatis terisi & layar scroll ke atas.</li>
+<li><b>Daftar Vendor</b> — tabel semua vendor, bisa dicari.</li>
+<li><b>Master Barang</b> — tabel semua barang yang dipakai. Klik <b><i data-lucide="settings"></i> Kelola Barang</b> untuk tambah/edit barang atau ubah stok minimum (ROP).</li>
+</ul>
+</div>
+</div>
+
+<!-- 5. PIC -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="user"></i> PIC</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Tambah / Edit PIC</b> — isi nama, divisi, posisi. Centang "Aktif" agar muncul di dropdown saat input transaksi.</li>
+<li><b>Daftar PIC</b> — lihat jumlah transaksi per orang, aktif/nonaktif, dan tombol Edit / Nonaktifkan / Hapus.</li>
+<li>PIC yang <b>nonaktif</b> tidak akan muncul di dropdown input transaksi baru, tapi transaksi lama tetap tercatat.</li>
+</ul>
+</div>
+</div>
+
+<!-- 6. LAPORAN -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="bar-chart-3"></i> Laporan</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li>Pilih periode dengan <b>isi manual</b> atau <b>tombol cepat</b> (Hari ini, 7 hari, 30 hari, 90 hari, Bulan ini, Bulan lalu, Tahun ini).</li>
+<li>Klik <b>Tampilkan</b> untuk render laporan.</li>
+<li><b>Rekap per Barang</b> — total IN, OUT, dan rata-rata OUT/hari.</li>
+<li><b>Rekap per PIC</b> — jumlah transaksi + total qty keluar per PIC.</li>
+<li><b>Centang "Bandingkan dengan bulan kalender sebelumnya"</b> → muncul banner pembanding + kolom <b>Δ vs Bulan Lalu</b> dengan badge warna:
+  <ul style="margin:4px 0 0 16px;">
+  <li><span class="cmp-delta up" style="font-size:10px;">▲ +12 (+57%)</span> = pemakaian naik (perlu perhatian)</li>
+  <li><span class="cmp-delta down" style="font-size:10px;">▼ -5 (-20%)</span> = pemakaian turun (lebih hemat)</li>
+  <li><span class="cmp-delta flat" style="font-size:10px;">＝ 0</span> = sama dengan bulan lalu</li>
+  <li><span class="cmp-delta new" style="font-size:10px;">▲ Baru</span> = bulan lalu kosong</li>
+  </ul>
+</li>
+<li><b>CSV Detail</b> — unduh rekap per barang dalam format Excel.</li>
+</ul>
+</div>
+</div>
+
+<!-- 7. PETUNJUK -->
+<div style="padding:16px;border:1px solid var(--warn-border);border-radius:14px;background:var(--steel-dim);">
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="book-open"></i> Petunjuk (halaman ini)</div>
+<div style="font-size:13px;color:var(--steel-bright);line-height:1.7;">
+Referensi lengkap tentang semua tab dan fitur. Cocok untuk training user baru atau kalau lupa cara pakai fitur tertentu.
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- === SUB-PANEL: FITUR === -->
+<div class="sub-panel" id="pt-fitur" hidden>
+<!-- === FITUR GLOBAL === -->
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="star"></i> Fitur Global (Berlaku di Semua Tab)</span></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="search"></i> Pencarian Global</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Klik kotak search di header, atau tekan <b>Ctrl + K</b>. Cari apa saja: SJ, invoice, vendor, barang, PIC, transaksi. Hasil dikelompokkan per kategori. Klik salah satu hasil → otomatis pindah ke tab yang sesuai, scroll ke baris, dan <b>highlight kuning</b> baris itu.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="trending-up"></i> Sparkline (Grafik Mini)</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Grafik kecil di bawah angka stok. Menunjukkan <b>pergerakan 7 hari terakhir</b>. Garis naik = stok bertambah (barang masuk). Garis turun = stok berkurang (dipakai). Warna hijau = aman, kuning = restock.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="moon"></i> Dark Mode</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Tombol di bagian bawah sidebar. Ganti antara mode terang & gelap. Pilihan kamu <b>tersimpan otomatis</b> — buka lagi browser, tetap dengan tema yang sama.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="ruler"></i> Sidebar Collapse</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Klik ikon <b>&lt;</b> di kanan logo untuk mengecilkan sidebar jadi ikon saja — berguna kalau layar sempit atau mau lihat tabel lebih luas. Klik lagi untuk buka.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="smartphone"></i> Mode Mobile</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Kalau dibuka di HP / tablet layar kecil, sidebar otomatis tersembunyi. Klik ikon <b><i data-lucide="menu"></i></b> di header untuk membukanya.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="clipboard-list"></i> Audit Log</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Ada di menu dropdown user (pojok kanan atas). Mencatat semua aksi: <b>Create</b> (tambah), <b>Update</b> (edit), <b>Delete</b> (hapus), <b>Login</b>, <b>Logout</b>. Bisa di-export ke CSV. Hanya Admin yang bisa membersihkan log.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="bell"></i> Notifikasi Browser</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Saat login pertama, muncul dialog izin notifikasi. Kalau diizinkan, kamu dapat pemberitahuan otomatis ketika ada barang di bawah stok minimum — <b>selama aplikasi/tab ini sedang terbuka</b> di browser. Notifikasi <b>tidak muncul saat tab ditutup</b> (butuh fitur lanjutan Service Worker yang belum tersedia).
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="users"></i> Role Admin vs Operator</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+<b>Admin</b> — akses penuh: kelola user, hapus data, kelola master barang/vendor/PIC, lihat audit log.<br>
+<b>Operator</b> — akses terbatas: input & edit transaksi, lihat laporan. Tidak bisa hapus data.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="lock"></i> Session 8 Jam</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Sesi login otomatis berakhir setelah <b>8 jam</b>. Kalau akunmu dinonaktifkan Admin saat sedang login, kamu langsung ter-logout otomatis.
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- === SUB-PANEL: HITUNG === -->
+<div class="sub-panel" id="pt-hitung" hidden>
+<!-- === CARA PERHITUNGAN STOK & METRIK === -->
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="calculator"></i> Cara Perhitungan Stok &amp; Metrik</span></div>
+<div class="section-sub">Semua angka yang kamu lihat di dashboard punya rumus jelas. Berikut penjelasan lengkapnya supaya kamu bisa menjawab kalau ditanya.</div>
+
+<!-- 1. STOK SAAT INI -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">1️⃣ Stok Saat Ini (Current Stock)</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Rumus:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+Stok = <b>Stok Awal</b> + Σ(Transaksi IN) − Σ(Transaksi OUT)
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Stok Awal</b> — angka awal yang di-set di Master Barang saat pertama kali didaftarkan.</li>
+<li><b>Transaksi IN</b> — semua transaksi jenis "Masuk" <b>menambah</b> stok.</li>
+<li><b>Transaksi OUT</b> — semua transaksi jenis "Keluar" <b>mengurangi</b> stok.</li>
+<li>Perhitungan <b>real-time</b> — setiap kali ada transaksi baru, stok langsung update otomatis.</li>
+</ul>
+<div style="background:var(--steel-dim);border-radius:8px;padding:10px 14px;margin-top:10px;font-size:12.5px;color:var(--steel-bright);">
+<b>Contoh:</b> Lakban Coklat stok awal 390. Hari ini ada IN 10 Roll dan OUT 43 Roll. Maka stok sekarang = 390 + 10 − 43 = <b>357 Roll</b>. <i data-lucide="check"></i>
+</div>
+</div>
+</div>
+
+<!-- 2. RATA-RATA PEMAKAIAN -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">2️⃣ Rata-rata Pemakaian per Hari (<i data-lucide="bar-chart-3"></i> x/hr)</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Rumus:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+Rate = <b>Total OUT (14 hari terakhir)</b> ÷ <b>14</b>
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li>Diambil dari <b>14 hari terakhir</b> — bukan seluruh riwayat.</li>
+<li>Pembagi adalah <b>jumlah hari kalender</b> (termasuk hari tanpa pemakaian). Jadi barang yang dipakai hanya di 2 dari 14 hari tetap dibagi 14, sehingga angka rate lebih kecil.</li>
+<li>Contoh: total OUT selama 14 hari = 33 Roll, maka rate = 33 ÷ 14 = <b>2,4 Roll/hari</b>.</li>
+<li>Angka ini dipakai untuk hitung <b>umur stok</b> dan urutkan prioritas kartu di Beranda.</li>
+</ul>
+</div>
+</div>
+
+<!-- 3. UMUR STOK -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">3️⃣ Estimasi Umur Stok (<i data-lucide="hourglass"></i> x Hari)</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Rumus:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+Umur Stok = <b>Stok Sekarang</b> ÷ <b>Rate Pemakaian Harian</b>
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li>Menjawab pertanyaan: <i>"Kalau pemakaian tetap seperti sekarang, stok ini cukup berapa lama lagi?"</i></li>
+<li>Kalau rate = 0 (tidak ada pemakaian) → tampil <b>"&gt;99 Hari"</b> (artinya hampir tidak terbatas).</li>
+<li>Contoh: stok 357, rate 2,4/hari → umur = 357 ÷ 2,4 ≈ <b>148 hari</b> → dibulatkan tampil "&gt;99 Hari".</li>
+</ul>
+</div>
+</div>
+
+<!-- 4. STATUS RESTOCK / AMAN -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">4️⃣ Status RESTOCK / AMAN</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Aturan:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+<b>RESTOCK</b> (kuning) = Stok ≤ Minimum (ROP)<br>
+<b>AMAN</b> (hijau) = Stok &gt; Minimum (ROP)
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>ROP (Reorder Point)</b> = titik pemesanan ulang. Diatur per barang di Master Barang.</li>
+<li>Kalau stok <b>≤ ROP</b>, kartu otomatis diberi badge kuning <b>RESTOCK</b> sebagai tanda segera order.</li>
+<li>Kalau stok <b>&gt; ROP</b>, kartu diberi badge hijau <b>AMAN</b>.</li>
+</ul>
+<div style="background:var(--warn-dim);border-radius:8px;padding:10px 14px;margin-top:10px;font-size:12.5px;color:var(--warn);">
+<b>Contoh:</b> Lakban Coklat stok 357, ROP 700 → 357 ≤ 700, jadi status <b>RESTOCK</b>. Notifikasi stok kritis juga akan muncul karena ini.
+</div>
+</div>
+</div>
+
+<!-- 5. SPARKLINE -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">5️⃣ Garis Sparkline (7 Hari)</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Bukan grafik angka—tapi <b>snapshot posisi stok</b> dari 7 hari terakhir:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+Titik hari ke-n = Stok Awal + Σ(transaksi ≤ hari itu)
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li>Tiap <b>titik</b> = posisi stok pada hari tersebut.</li>
+<li>Garis <b>naik</b> = hari itu ada transaksi IN (barang masuk).</li>
+<li>Garis <b>turun</b> = hari itu ada transaksi OUT (barang keluar).</li>
+<li>Garis <b>datar</b> = tidak ada transaksi hari itu.</li>
+<li>Warna garis mengikuti status kartu — hijau (AMAN) atau kuning (RESTOCK).</li>
+</ul>
+</div>
+</div>
+
+<!-- 6. RATA-RATA OUT DI LAPORAN -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">6️⃣ Rata-rata OUT/Hari di Laporan</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Berbeda dengan yang di kartu stok:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+Rate = <b>Total OUT dalam periode yang dipilih</b> ÷ <b>Jumlah hari periode</b>
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Di kartu stok</b> → selalu pakai 14 hari terakhir (fixed).</li>
+<li><b>Di laporan</b> → ikut periode yang kamu pilih. Kalau pilih "Bulan ini" = 31 hari, kalau pilih "7 hari" = 7 hari.</li>
+<li>Jadi kalau kamu bandingkan 2 periode, angka ini bisa berbeda karena jumlah harinya berbeda.</li>
+</ul>
+</div>
+</div>
+
+<!-- 7. DELTA BULAN LALU -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">7️⃣ Delta vs Bulan Lalu (Δ)</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Rumus:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+Δ = <b>Qty Periode Ini</b> − <b>Qty Periode Pembanding</b><br>
+Δ% = (Δ ÷ Qty Pembanding) × 100%
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li><b>Periode pembanding</b> = bulan kalender sebelumnya, dengan tanggal yang sama (contoh: 1–31 Okt vs 1–30 Sep).</li>
+<li>Kalau tanggal tidak ada di bulan pembanding (mis. 31 Nov), otomatis di-clamp ke hari terakhir bulan itu.</li>
+<li>Rumus khusus:
+  <ul style="margin:4px 0 0 16px;">
+  <li>Pembanding = 0, sekarang = 0 → tampil "＝ 0"</li>
+  <li>Pembanding = 0, sekarang &gt; 0 → tampil "▲ Baru"</li>
+  <li>Pembanding &gt; 0 → hitung Δ dan Δ%</li>
+  </ul>
+</li>
+</ul>
+</div>
+</div>
+
+<!-- 8. AUTO-STOCK SJ -->
+<div style="padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);">
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--steel-bright);">8️⃣ Auto-Stock dari Surat Jalan</div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Saat input SJ di tab <b>Pembelian</b> dan opsi <b>"Otomatis tambah Stok WMS"</b> dicentang:
+<div style="background:var(--surface-raised);border-left:3px solid var(--steel);padding:10px 14px;border-radius:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);">
+1 SJ dengan 3 barang → 3 transaksi IN otomatis dibuat<br>
+setiap transaksi diberi tag <b><i data-lucide="link"></i> auto-stock</b> + referensi <b>SJ-xxxx</b>
+</div>
+<ul style="margin:8px 0 0 20px;padding:0;">
+<li>Transaksi auto-stock <b>tidak bisa dihapus langsung</b> dari tab Transaksi — harus hapus SJ di tab Pembelian.</li>
+<li>Edit qty di SJ → transaksi auto-stock ikut ter-update otomatis.</li>
+<li>Kalau SJ dihapus → semua transaksi auto-stock terkait <b>ikut terhapus</b>.</li>
+</ul>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- === SUB-PANEL: TIPS === -->
+<div class="sub-panel" id="pt-tips" hidden>
+<!-- === TIPS & FAQ === -->
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="lightbulb"></i> Tips &amp; Pertanyaan Umum</span></div>
+<div style="font-size:13px;color:var(--ink-muted);line-height:1.8;">
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Bagaimana cara input transaksi cepat?</b><br>
+Tab <b>Transaksi Gudang</b> → isi form paling atas → klik <b>Simpan Transaksi</b>. Form otomatis reset supaya bisa langsung input transaksi berikutnya.
+</div>
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Kenapa stok barang A tetap 0 padahal ada pengiriman?</b><br>
+Cek tab <b>Pembelian</b> → pastikan saat input SJ, opsi <b>"Otomatis tambah Stok WMS"</b> dicentang. Kalau tidak dicentang, stok tidak otomatis naik.
+</div>
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Barang baru muncul "Baru" di kolom perbandingan, artinya apa?</b><br>
+Artinya bulan lalu barang ini belum ada transaksi sama sekali (0). Bulan ini baru ada, jadi tidak bisa dihitung persentase kenaikannya.
+</div>
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Bagaimana cara mengembalikan data yang terhapus?</b><br>
+Sayangnya <b>belum ada tombol Undo</b>. Data transaksi disimpan di memori — kalau halaman di-refresh, semua data kembali ke contoh awal. Fitur persistensi akan ditambahkan di versi selanjutnya.
+</div>
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Bisa pindah komputer?</b><br>
+Bisa. Tapi karena data disimpan di browser (localStorage), user & audit log tidak akan ikut. Disarankan pakai fitur <b>Export CSV</b> untuk backup laporan.
+</div>
+
+<div style="padding:12px 0;">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Kalau ada masalah, hubungi siapa?</b><br>
+Hubungi <b>Admin sistem</b>. Sertakan screenshot layar + pesan error di Console (F12 → Console) supaya lebih cepat didiagnosis.
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- === SUB-PANEL: GLOSARIUM === -->
+<div class="sub-panel" id="pt-glosarium" hidden>
+<div class="section">
+<div class="section-title"><span class="st-main"><i data-lucide="book-open"></i> Glosarium Singkatan &amp; Istilah</span></div>
+<div class="section-sub">Referensi cepat untuk semua singkatan dan istilah teknis yang muncul di aplikasi. Cocok untuk user baru atau kalau kamu lupa artinya.</div>
+
+<!-- ===== ISTILAH GUDANG ===== -->
+<div style="margin-bottom:22px;">
+<div style="font-size:12px;font-weight:700;color:var(--steel-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--steel-dim);"><i data-lucide="factory"></i> Istilah Gudang &amp; Transaksi</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">SJ</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Surat Jalan</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Dokumen pengiriman barang dari vendor ke gudang.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">PO</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Purchase Order</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Pesanan pembelian resmi ke vendor.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">INV</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Invoice</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Tagihan resmi dari vendor atas barang yang dikirim.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">PIC</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Person In Charge</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Orang penanggung jawab yang mencatat atau melakukan transaksi.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">ROP</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Reorder Point</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Batas stok minimum. Kalau stok ≤ ROP, barang perlu segera di-restock.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">QTY</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Quantity</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Jumlah barang dalam satuan tertentu (Roll, Pcs, Box, dll).</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">WMS</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Warehouse Management System</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Sistem manajemen stok gudang. Di aplikasi ini, "Stok WMS" = stok yang dihitung dari data transaksi.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--good-dim);color:var(--good);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">IN</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Barang Masuk</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Transaksi yang <b>menambah</b> stok. Contoh: barang dari vendor, retur dari user.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--warn-dim);color:var(--warn);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">OUT</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Barang Keluar</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Transaksi yang <b>mengurangi</b> stok. Contoh: pemakaian packing, pengiriman keluar.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">BP</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Prefix Kode Barang</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Prefix kode barang di Master Barang. <b>BP-</b> dipakai untuk semua kategori (Bahan Packing, Bahan Pendukung, dll). Contoh: BP-001 Lakban Coklat (Bahan Packing), BP-004 Label Resi (Bahan Pendukung).</div>
+</div>
+
+</div>
+</div>
+
+<!-- ===== ISTILAH TEKNIS ===== -->
+<div style="margin-bottom:22px;">
+<div style="font-size:12px;font-weight:700;color:var(--steel-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--steel-dim);"><i data-lucide="laptop"></i> Istilah Teknis &amp; Aplikasi</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Dashboard</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Halaman utama / Beranda aplikasi. Berisi ringkasan stok, grafik, dan aktivitas terbaru.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Sparkline</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Grafik mini garis di kartu stok. Menunjukkan pergerakan stok <b>7 hari terakhir</b>.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Auto-stock</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Fitur di tab Pembelian. Kalau dicentang, stok WMS otomatis bertambah saat Surat Jalan disimpan.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Session</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Sesi login. Otomatis berakhir setelah <b>8 jam</b> untuk alasan keamanan.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Audit Log</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Catatan semua aktivitas user: login, logout, tambah/edit/hapus data. Bisa di-export ke CSV.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">CSV</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Comma-Separated Values. Format file teks yang bisa dibuka di Excel / Google Sheets.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">localStorage</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Penyimpanan di browser. Data di sini akan <b>hilang</b> kalau browser di-clear cache. Data user & preferensi tema disimpan di sini.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Tagihan Berjalan</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">SJ yang sudah diterima tapi <b>belum dibayar</b> ke vendor. Statusnya bergerak: Menunggu Invoice → Di Finance → Lunas.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Clamp Tanggal</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Penyesuaian tanggal otomatis saat bandingkan periode. Contoh: 31 Nov tidak ada → di-clamp ke 30 Nov.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Role</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Hak akses user. <b>Admin</b> = akses penuh. <b>Operator</b> = akses terbatas (tidak bisa hapus data / kelola user).</div>
+</div>
+
+</div>
+</div>
+
+<!-- ===== KODE VENDOR ===== -->
+<div>
+<div style="font-size:12px;font-weight:700;color:var(--steel-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--steel-dim);"><i data-lucide="building-2"></i> Kode Vendor (Contoh)</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">NMS</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">PT Niaga Mas Sukses</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Supplier lakban & buble wrap.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">PCI</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">PT. Poris Cipta Indonesia</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Supplier bahan pendukung.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">SLI</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">PT. Star Lights Indonesia</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Supplier lakban industri.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">ZLI</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">PT. Zhen Lin Indonesia</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Supplier label & stiker.</div>
+</div>
+
+</div>
+</div>
+
+</div>
+</div>
+<div class="section" style="background:var(--steel-dim);border-color:var(--warn-border);">
+<div style="font-size:12.5px;color:var(--steel-bright);line-height:1.7;text-align:center;">
+<i data-lucide="pin"></i> <b>Catatan:</b> Halaman ini masih versi demo dengan data contoh. Semua fitur berfungsi normal di memori, namun belum terhubung ke database asli. Fitur simpan permanen akan ditambahkan di versi berikutnya.
+</div>
+</div>
+
+</section>
+<footer class="note">Data contoh untuk preview alur kerja — form &amp; tabel di atas fungsional terhadap data contoh ini, belum terhubung ke database asli.</footer>
+</main>
+</div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" hidden><div class="modal-box" id="modal-box" role="dialog"></div></div>
+<div class="modal-overlay manage-layer" id="manage-overlay" hidden><div class="modal-box" id="manage-box" role="dialog"></div></div>
+<div class="modal-overlay alert-layer" id="alert-overlay" hidden><div class="modal-box" id="alert-box" role="alertdialog"></div></div>
+<div class="modal-overlay semua-layer" id="semua-overlay" hidden>
+<div class="modal-box" role="dialog">
+<div class="modal-head">
+<div><div class="title" id="semua-title">Semua Barang</div><div class="subtitle" id="semua-subtitle">—</div></div>
+<button class="close" id="semua-close" type="button"><i data-lucide="x"></i></button>
+</div>
+<input type="text" class="search-input" id="semua-search" placeholder="Cari nama atau kode barang..." />
+<div class="stok-grid" id="semua-grid"></div>
+<div id="semua-empty" class="empty-search" hidden>Tidak ada barang yang cocok dengan pencarian.</div>
+</div>
+</div>
+<div class="modal-overlay file-preview-modal" id="file-preview-overlay" hidden>
+<div class="modal-box" role="dialog">
+<div class="modal-head">
+<div><div class="title" id="file-preview-title">File</div><div class="subtitle" id="file-preview-subtitle">—</div></div>
+<button class="close" id="file-preview-close" type="button"><i data-lucide="x"></i></button>
+</div>
+<div class="gallery" id="file-preview-gallery"></div>
+</div>
+</div>
+
+<div class="modal-overlay user-manage-layer" id="modal-users" hidden>
+<div class="modal-box" role="dialog">
+<div class="modal-head">
+<div><div class="title"><i data-lucide="users"></i> Kelola User</div><div class="subtitle">Tambah, edit, atau nonaktifkan user.</div></div>
+<button class="close" id="modal-users-close" type="button"><i data-lucide="x"></i></button>
+</div>
+<button class="btn btn-primary" id="btn-add-user" style="margin-bottom:16px;"><i data-lucide="plus"></i> Tambah User Baru</button>
+<div class="user-list" id="user-list"></div>
+</div>
+</div>
+
+<div class="modal-overlay user-manage-layer" id="modal-user-form" hidden>
+<div class="modal-box" role="dialog" style="max-width:460px;">
+<div class="modal-title" id="modal-form-title">Tambah User Baru</div>
+<div class="modal-sub" id="modal-form-sub">Isi data user dengan lengkap</div>
+<div class="field"><label for="uf-username">Username <span style="color:var(--danger)">*</span></label><input type="text" id="uf-username" placeholder="Cth: afandi" autocomplete="off" /><div class="helper">Huruf kecil, angka, underscore.</div></div>
+<div class="field"><label for="uf-nama">Nama Lengkap <span style="color:var(--danger)">*</span></label><input type="text" id="uf-nama" placeholder="Cth: Afandi Pratama" /></div>
+<div class="field"><label for="uf-role">Role <span style="color:var(--danger)">*</span></label><select id="uf-role"><option value="Admin">Admin — akses penuh</option><option value="Operator" selected>Operator — akses terbatas</option></select></div>
+<div class="field"><label for="uf-password">Password <span style="color:var(--danger)">*</span></label><input type="password" id="uf-password" placeholder="Minimal 6 karakter" autocomplete="new-password" /><div class="helper" id="uf-password-helper">Untuk user baru, wajib diisi.</div></div>
+<div class="modal-actions"><button class="btn btn-secondary" id="modal-form-cancel">Batal</button><button class="btn btn-primary" id="modal-form-save">Simpan</button></div>
+</div>
+</div>
+
+<div class="modal-overlay user-manage-layer" id="modal-change-pwd" hidden>
+<div class="modal-box" role="dialog" style="max-width:440px;">
+<div class="modal-title"><i data-lucide="lock"></i> Ubah Password</div>
+<div class="modal-sub">Ganti password untuk akun <b id="cp-who">—</b></div>
+<div class="field"><label for="cp-old">Password Lama <span style="color:var(--danger)">*</span></label><input type="password" id="cp-old" placeholder="Masukkan password lama" autocomplete="current-password" /></div>
+<div class="field"><label for="cp-new">Password Baru <span style="color:var(--danger)">*</span></label><input type="password" id="cp-new" placeholder="Minimal 6 karakter" autocomplete="new-password" /></div>
+<div class="field"><label for="cp-confirm">Konfirmasi Password Baru <span style="color:var(--danger)">*</span></label><input type="password" id="cp-confirm" placeholder="Ulangi password baru" autocomplete="new-password" /></div>
+<div class="modal-actions"><button class="btn btn-secondary" id="modal-cp-cancel">Batal</button><button class="btn btn-primary" id="modal-cp-save">Simpan Password Baru</button></div>
+</div>
+</div>
+
+<div class="modal-overlay search-layer" id="search-modal" hidden>
+<div class="modal-box" role="dialog" style="max-width:720px;">
+<div class="modal-head">
+<div><div class="title"><i data-lucide="search"></i> Pencarian Global</div><div class="subtitle">Cari SJ, invoice, vendor, barang, PIC</div></div>
+<button class="close" id="search-modal-close" type="button"><i data-lucide="x"></i></button>
+</div>
+<input type="text" class="search-input" id="search-input" placeholder="Ketik untuk mencari..." autocomplete="off" />
+<div class="search-results" id="search-results"></div>
+</div>
+</div>
+
+<div class="modal-overlay user-manage-layer" id="modal-audit" hidden>
+<div class="modal-box" role="dialog" style="max-width:720px;">
+<div class="modal-head">
+<div><div class="title"><i data-lucide="clipboard-list"></i> Audit Log</div><div class="subtitle">Riwayat perubahan data</div></div>
+<button class="close" id="modal-audit-close" type="button"><i data-lucide="x"></i></button>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+<input type="text" id="audit-search" placeholder="Cari user / aksi / target..." style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--ink);" />
+<button class="btn btn-secondary btn-sm" id="btn-audit-csv" type="button" style="width:auto;"><i data-lucide="download"></i> CSV</button>
+<button class="btn btn-secondary btn-sm" id="btn-audit-clear" type="button" style="width:auto;color:var(--danger);"><i data-lucide="trash-2"></i> Bersihkan</button>
+</div>
+<div class="audit-list" id="audit-list"></div>
+</div>
+</div>
+
+<div class="session-bar" id="session-bar" hidden>
+<span class="dot"></span>
+<span>Login sebagai <b id="session-user">—</b> · Logout otomatis dalam <b id="session-remain">8j 00m</b></span>
+</div>
+
+<div id="toast-container"></div>
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Konfigurasi Supabase -->
+<script src="js/config.js?v=19"></script>
+<!-- Koneksi Supabase -->
+<script src="js/supabase.js?v=19"></script>
+<!-- Autentikasi -->
+<script src="js/auth.js?v=19"></script>
+<!-- Layer data (DB) -->
+<script src="js/data.js?v=19"></script>
+<!-- Realtime -->
+<script src="js/realtime.js?v=19"></script>
+<!-- Aplikasi -->
+<script src="js/app.js?v=19"></script>
+</body>
+</html>
