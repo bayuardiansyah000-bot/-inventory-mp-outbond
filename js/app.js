@@ -1100,6 +1100,7 @@ function render(){
   renderQuickStock();
   updateVendorBadge();
    updatePembelianBadge();
+  if(typeof initVendorSelects==="function") { initVendorSelects(); setLaporanPbDefault(); }
   if(state.activeTab==="beranda"){
     requestAnimationFrame(()=>{
       renderChart(state.berandaDays);
@@ -2143,6 +2144,146 @@ ${deltaCell(v.qty, prevQty)}
 
   window._lastPerBarang=perBarang;
 }
+
+// ==================== LAPORAN PEMBELIAN & PEMBAYARAN ====================
+function fmtRupiahLaporan(n){ return "Rp "+(n||0).toLocaleString("id-ID"); }
+
+function cardLaporan(label,value,warn){
+  return `<div class="stat-card${warn?" warn-card":""}" style="padding:14px 16px;">
+    <div class="stat-name">${esc(label)}</div>
+    <div class="stat-value" style="font-size:20px;margin-top:6px;">${value}</div>
+  </div>`;
+}
+
+function initVendorSelects(){
+  const opts = Object.values(DATA.vendors).map(v=>`<option value="${esc(v.kode)}">${esc(v.nama)}</option>`).join("");
+  const a=document.getElementById("pb-vendor");
+  if(a){ const cur=a.value; a.innerHTML='<option value="">Semua Vendor</option>'+opts; a.value=cur; }
+  const b=document.getElementById("pay-vendor");
+  if(b){ const cur=b.value; b.innerHTML='<option value="">Semua Vendor</option>'+opts; b.value=cur; }
+}
+
+// dua tanggal default: bulan ini
+function setLaporanPbDefault(){
+  const now=new Date();
+  const from=new Date(now.getFullYear(),now.getMonth(),1);
+  const to=new Date(now.getFullYear(),now.getMonth()+1,0);
+  const f=fmtInputDate(from), t=fmtInputDate(to);
+  const pd=document.getElementById("pb-dari"); if(pd && !pd.value) pd.value=f;
+  const ps=document.getElementById("pb-sampai"); if(ps && !ps.value) ps.value=t;
+  const yd=document.getElementById("pay-dari"); if(yd && !yd.value) yd.value=f;
+  const ys=document.getElementById("pay-sampai"); if(ys && !ys.value) ys.value=t;
+}
+
+function renderLaporanPembelian(){
+  const body=document.getElementById("pb-body"); if(!body) return;
+  const dariV=document.getElementById("pb-dari").value;
+  const sampaiV=document.getElementById("pb-sampai").value;
+  const vendor=document.getElementById("pb-vendor").value;
+  if(!dariV||!sampaiV){ body.innerHTML='<tr class="empty-row"><td colspan="7">Isi periode dulu.</td></tr>'; return; }
+  const from=new Date(dariV+"T00:00:00"), to=new Date(sampaiV+"T23:59:59");
+  let rows=DATA.pembelian.filter(r=>r.tglSJ && r.tglSJ>=from && r.tglSJ<=to);
+  if(vendor) rows=rows.filter(r=>r.vendor===vendor);
+  rows=rows.slice().sort((a,b)=>b.tglSJ-a.tglSJ);
+  if(rows.length===0){
+    body.innerHTML='<tr class="empty-row"><td colspan="7">Tidak ada pembelian pada periode ini.</td></tr>';
+    document.getElementById("pb-cards").innerHTML="";
+    document.getElementById("pb-total").textContent="";
+    return;
+  }
+  let total=0, sjs=new Set(), vendors=new Set();
+  body.innerHTML=rows.map(r=>{
+    const it=itemByKode(r.kode)||{nama:r.kode,satuan:""};
+    const sub=(r.qty||0)*(r.hargaPcs||0);
+    total+=sub; sjs.add(r.vendor+"::"+normalizeSJ(r.sj)); vendors.add(r.vendor);
+    return `<tr>
+      <td>${esc(fmtTgl(r.tglSJ))}</td>
+      <td class="mono">${esc(r.sj)}</td>
+      <td>${esc(vendorNama(r.vendor))}</td>
+      <td><b>${esc(it.nama)}</b></td>
+      <td style="text-align:right">${r.qty} ${esc(it.satuan)}</td>
+      <td style="text-align:right">${r.hargaPcs?fmtRupiahLaporan(r.hargaPcs):"-"}</td>
+      <td style="text-align:right">${sub?fmtRupiahLaporan(sub):"-"}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("pb-cards").innerHTML=
+    cardLaporan("Total Nilai Pembelian", fmtRupiahLaporan(total), false)+
+    cardLaporan("Jumlah SJ", sjs.size+" SJ", false)+
+    cardLaporan("Jumlah Vendor", vendors.size+" vendor", false);
+  document.getElementById("pb-total").textContent=`Total ${rows.length} baris - ${fmtRupiahLaporan(total)}`;
+  document.getElementById("pb-hint").textContent=`${fmtTgl(from)} - ${fmtTgl(to)}`;
+  refreshIcons();
+}
+
+function renderLaporanPembayaran(){
+  const body=document.getElementById("pay-body"); if(!body) return;
+  const dariV=document.getElementById("pay-dari").value;
+  const sampaiV=document.getElementById("pay-sampai").value;
+  const vendor=document.getElementById("pay-vendor").value;
+  if(!dariV||!sampaiV){ body.innerHTML='<tr class="empty-row"><td colspan="7">Isi periode dulu.</td></tr>'; return; }
+  const from=new Date(dariV+"T00:00:00"), to=new Date(sampaiV+"T23:59:59");
+  // dikelompokkan per SJ (pembayaran = SJ yang sudah lunas)
+  let groups=pembelianGroups().filter(g=>g.lunas && g.tglLunas && g.tglLunas>=from && g.tglLunas<=to);
+  if(vendor) groups=groups.filter(g=>g.vendor===vendor);
+  groups=groups.sort((a,b)=>b.tglLunas-a.tglLunas);
+  if(groups.length===0){
+    body.innerHTML='<tr class="empty-row"><td colspan="7">Tidak ada pembayaran pada periode ini.</td></tr>';
+    document.getElementById("pay-cards").innerHTML="";
+    document.getElementById("pay-total").textContent="";
+    return;
+  }
+  let total=0, vendors=new Set();
+  body.innerHTML=groups.map(g=>{
+    total+=g.total; vendors.add(g.vendor);
+    return `<tr>
+      <td>${esc(fmtTgl(g.tglLunas))}</td>
+      <td class="mono">${esc(g.sj)}</td>
+      <td>${esc(vendorNama(g.vendor))}</td>
+      <td class="mono">${esc(g.invoice||"-")}</td>
+      <td style="text-align:right">${fmtRupiahLaporan(g.total)}</td>
+      <td style="text-align:right">${fmtRupiahLaporan(g.total)}</td>
+      <td class="sub">${esc(g.buktiLunas||"-")}</td>
+    </tr>`;
+  }).join("");
+  const rata=Math.round(total/groups.length);
+  document.getElementById("pay-cards").innerHTML=
+    cardLaporan("Total Dibayar", fmtRupiahLaporan(total), false)+
+    cardLaporan("Jumlah SJ Lunas", groups.length+" SJ", false)+
+    cardLaporan("Jumlah Vendor", vendors.size+" vendor", false)+
+    cardLaporan("Rata-rata / SJ", fmtRupiahLaporan(rata), false);
+  document.getElementById("pay-total").textContent=`Total ${groups.length} SJ - ${fmtRupiahLaporan(total)}`;
+  document.getElementById("pay-hint").textContent=`${fmtTgl(from)} - ${fmtTgl(to)}`;
+  refreshIcons();
+}
+
+function csvLaporanPembelian(){
+  const dariV=document.getElementById("pb-dari").value, sampaiV=document.getElementById("pb-sampai").value;
+  const vendor=document.getElementById("pb-vendor").value;
+  if(!dariV||!sampaiV){ alertModal("Periode belum diisi","Isi tanggal dulu."); return; }
+  const from=new Date(dariV+"T00:00:00"), to=new Date(sampaiV+"T23:59:59");
+  let rows=DATA.pembelian.filter(r=>r.tglSJ && r.tglSJ>=from && r.tglSJ<=to);
+  if(vendor) rows=rows.filter(r=>r.vendor===vendor);
+  rows=rows.slice().sort((a,b)=>b.tglSJ-a.tglSJ);
+  const out=rows.map(r=>{
+    const it=itemByKode(r.kode)||{nama:r.kode,satuan:""};
+    return [fmtTgl(r.tglSJ), r.sj, vendorNama(r.vendor), it.nama, r.qty, it.satuan, r.hargaPcs||0, (r.qty||0)*(r.hargaPcs||0)];
+  });
+  downloadCSV("laporan-pembelian.csv",["Tgl Datang","No SJ","Vendor","Barang","Qty","Satuan","Harga","Subtotal"],out);
+  toast("CSV diunduh","success","laporan-pembelian.csv");
+}
+function csvLaporanPembayaran(){
+  const dariV=document.getElementById("pay-dari").value, sampaiV=document.getElementById("pay-sampai").value;
+  const vendor=document.getElementById("pay-vendor").value;
+  if(!dariV||!sampaiV){ alertModal("Periode belum diisi","Isi tanggal dulu."); return; }
+  const from=new Date(dariV+"T00:00:00"), to=new Date(sampaiV+"T23:59:59");
+  let groups=pembelianGroups().filter(g=>g.lunas && g.tglLunas && g.tglLunas>=from && g.tglLunas<=to);
+  if(vendor) groups=groups.filter(g=>g.vendor===vendor);
+  groups=groups.sort((a,b)=>b.tglLunas-a.tglLunas);
+  const out=groups.map(g=>[fmtTgl(g.tglLunas), g.sj, vendorNama(g.vendor), g.invoice||"-", g.total, g.total, g.buktiLunas||"-"]);
+  downloadCSV("laporan-pembayaran.csv",["Tgl Lunas","No SJ","Vendor","Invoice","Total Tagihan","Dibayar","Bukti"],out);
+  toast("CSV diunduh","success","laporan-pembayaran.csv");
+}
+
 // ==================== CLOCK ====================
 function tickClock(){
   const now=new Date();
@@ -3584,6 +3725,29 @@ document.getElementById("btn-csv-barang").addEventListener("click",()=>{
   downloadCSV("rekap-per-barang.csv",["Barang","Masuk","Keluar","Rata-rata OUT/hari (hari kalender)"],window._lastPerBarang.map(r=>[r.nama,r.masuk,r.keluar,r.rate]));
   toast("CSV diunduh","success","rekap-per-barang.csv");
 });
+
+// ==================== SUB-TABS LAPORAN ====================
+function switchLaporanTab(target){
+  document.querySelectorAll("#laporan-tabs button").forEach(b=>{
+    b.setAttribute("aria-selected",String(b.dataset.lp2===target));
+  });
+  ["pemakaian","pembelian","pembayaran"].forEach(t=>{
+    const el=document.getElementById("lp-"+t);
+    if(el) el.hidden = (t!==target);
+  });
+}
+document.getElementById("laporan-tabs").addEventListener("click",e=>{
+  const btn=e.target.closest("button[data-lp2]");
+  if(!btn) return;
+  switchLaporanTab(btn.dataset.lp2);
+  if(btn.dataset.lp2==="pembelian") renderLaporanPembelian();
+  if(btn.dataset.lp2==="pembayaran") renderLaporanPembayaran();
+});
+document.getElementById("btn-pb-tampilkan").addEventListener("click",renderLaporanPembelian);
+document.getElementById("btn-pay-tampilkan").addEventListener("click",renderLaporanPembayaran);
+document.getElementById("btn-pb-csv").addEventListener("click",csvLaporanPembelian);
+document.getElementById("btn-pay-csv").addEventListener("click",csvLaporanPembayaran);
+
 // ==================== SUB-TABS VENDOR ====================
 function switchVendorTab(target){
   document.querySelectorAll("#vendor-tabs button").forEach(b=>{
