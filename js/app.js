@@ -457,8 +457,9 @@ function currentStock(kode,excludeIdx){
   });
   return s;
 }
-const RECENT_WINDOW_DAYS=14;
+const RECENT_WINDOW_DAYS=7;
 
+// Rata-rata pemakaian: total OUT ÷ jumlah hari kalender pada periode (dipakai di laporan).
 function avgDailyKeluar(kode,fromDate,toDate){
   const fromStart=new Date(fromDate);fromStart.setHours(0,0,0,0);
   const toStart=new Date(toDate);toStart.setHours(0,0,0,0);
@@ -466,10 +467,20 @@ function avgDailyKeluar(kode,fromDate,toDate){
   const tot=DATA.transaksi.filter(t=>t.kode===kode&&t.jenis==="Keluar"&&t.tanggal>=fromDate&&t.tanggal<=toDate).reduce((a,t)=>a+t.jumlah,0);
   return tot/days;
 }
+// Rata-rata pemakaian (kartu Beranda/umur stok): total OUT 7 hari terakhir ÷
+// jumlah hari yang ADA pemakaian (hari aktif), seperti AVERAGE(FILTER(...)).
 function recentDailyUsage(kode){
   const from=new Date(TODAY);
   from.setDate(from.getDate()-(RECENT_WINDOW_DAYS-1));
-  return avgDailyKeluar(kode,from,endOfDay(TODAY));
+  const to=endOfDay(TODAY);
+  const trx=DATA.transaksi.filter(t=>t.kode===kode&&t.jenis==="Keluar"&&t.tanggal>=from&&t.tanggal<=to);
+  const tot=trx.reduce((a,t)=>a+t.jumlah,0);
+  // hitung jumlah hari unik yang ada pemakaian
+  const hari=new Set(trx.map(t=>{
+    const d=new Date(t.tanggal); d.setHours(0,0,0,0); return d.getTime();
+  }));
+  const hariAktif=Math.max(1,hari.size);
+  return tot/hariAktif;
 }
 function totalKeluarPeriode(kode,days){
   const from=new Date(TODAY);
@@ -1263,7 +1274,7 @@ function statCardHtml(it){
     </div>
     <div class="stat-value">${stok} <small>${esc(it.satuan)}</small></div>
     <div class="stat-spark" data-spark-kode="${esc(it.kode)}" data-spark-warn="${warn?"1":"0"}"></div>
-    <div class="stat-foot"><span title="Total pemakaian dibagi jumlah hari kalender (termasuk hari tanpa pemakaian)"><i data-lucide="bar-chart-3"></i> ${rate}/hr*</span><span><i data-lucide="hourglass"></i> ${umurLabel}</span></div>
+    <div class="stat-foot"><span title="Total pemakaian 7 hari terakhir dibagi jumlah hari yang ada pemakaian"><i data-lucide="bar-chart-3"></i> ${rate}/hr</span><span><i data-lucide="hourglass"></i> ${umurLabel}</span></div>
   </div>`;
 }
 function renderBeranda(){
@@ -1311,7 +1322,7 @@ function renderLeaderboard(){
   const el=document.getElementById("leader-list");
   const foot=document.getElementById("leader-foot");
   if(list.length===0){
-    el.innerHTML='<div class="sub" style="padding:14px 0;text-align:center;">Belum ada transaksi OUT dalam 14 hari terakhir.</div>';
+    el.innerHTML='<div class="sub" style="padding:14px 0;text-align:center;">Belum ada transaksi OUT dalam 7 hari terakhir.</div>';
     foot.hidden=true;
     return;
   }
