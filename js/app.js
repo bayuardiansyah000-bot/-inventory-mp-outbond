@@ -467,20 +467,14 @@ function avgDailyKeluar(kode,fromDate,toDate){
   const tot=DATA.transaksi.filter(t=>t.kode===kode&&t.jenis==="Keluar"&&t.tanggal>=fromDate&&t.tanggal<=toDate).reduce((a,t)=>a+t.jumlah,0);
   return tot/days;
 }
-// Rata-rata pemakaian (kartu Beranda/umur stok): total OUT 7 hari terakhir ÷
-// jumlah hari yang ADA pemakaian (hari aktif), seperti AVERAGE(FILTER(...)).
+// Rata-rata pemakaian (kartu Beranda/umur stok): total OUT 7 hari terakhir ÷ 7
+// (hari kalender — termasuk hari tanpa pemakaian).
 function recentDailyUsage(kode){
   const from=new Date(TODAY);
   from.setDate(from.getDate()-(RECENT_WINDOW_DAYS-1));
   const to=endOfDay(TODAY);
-  const trx=DATA.transaksi.filter(t=>t.kode===kode&&t.jenis==="Keluar"&&t.tanggal>=from&&t.tanggal<=to);
-  const tot=trx.reduce((a,t)=>a+t.jumlah,0);
-  // hitung jumlah hari unik yang ada pemakaian
-  const hari=new Set(trx.map(t=>{
-    const d=new Date(t.tanggal); d.setHours(0,0,0,0); return d.getTime();
-  }));
-  const hariAktif=Math.max(1,hari.size);
-  return tot/hariAktif;
+  const tot=DATA.transaksi.filter(t=>t.kode===kode&&t.jenis==="Keluar"&&t.tanggal>=from&&t.tanggal<=to).reduce((a,t)=>a+t.jumlah,0);
+  return tot/RECENT_WINDOW_DAYS;
 }
 function totalKeluarPeriode(kode,days){
   const from=new Date(TODAY);
@@ -1274,7 +1268,7 @@ function statCardHtml(it){
     </div>
     <div class="stat-value">${stok} <small>${esc(it.satuan)}</small></div>
     <div class="stat-spark" data-spark-kode="${esc(it.kode)}" data-spark-warn="${warn?"1":"0"}"></div>
-    <div class="stat-foot"><span title="Total pemakaian 7 hari terakhir dibagi jumlah hari yang ada pemakaian"><i data-lucide="bar-chart-3"></i> ${rate}/hr</span><span><i data-lucide="hourglass"></i> ${umurLabel}</span></div>
+    <div class="stat-foot"><span title="Total pemakaian 7 hari terakhir dibagi 7 (hari kalender)"><i data-lucide="bar-chart-3"></i> ${rate}/hr</span><span><i data-lucide="hourglass"></i> ${umurLabel}</span></div>
   </div>`;
 }
 function renderBeranda(){
