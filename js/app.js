@@ -363,6 +363,7 @@ vendors:{},
 picList:[],
 bagianList:[],
 bagianRows:[],
+vendorItems:{},
 transaksi:[],   // dimuat dari Supabase (lihat loadMasterData()/loadTransaksi())
 pembelian:[],   // menyusul: akan dimuat dari Supabase
 };
@@ -370,8 +371,9 @@ pembelian:[],   // menyusul: akan dimuat dari Supabase
 // ==================== LOAD MASTER DATA DARI DB ====================
 async function loadMasterData(){
   if(typeof dbLoadItems!=="function") return;
-  const [items, vendors, picList, bagianRows, transaksi, pembelian] = await Promise.all([
-    dbLoadItems(), dbLoadVendors(), dbLoadPic(), dbLoadBagian(), dbLoadTransaksi(), dbLoadPembelian()
+  const [items, vendors, picList, bagianRows, transaksi, pembelian, vendorItems] = await Promise.all([
+    dbLoadItems(), dbLoadVendors(), dbLoadPic(), dbLoadBagian(), dbLoadTransaksi(), dbLoadPembelian(),
+    (typeof dbLoadVendorItems==="function"?dbLoadVendorItems():Promise.resolve({}))
   ]);
   DATA.items = items;
   DATA.vendors = vendors;
@@ -380,7 +382,13 @@ async function loadMasterData(){
   DATA.bagianRows = bagianRows; // {id,nama} untuk rename/hapus
   DATA.transaksi = transaksi;
   DATA.pembelian = pembelian;
+  DATA.vendorItems = vendorItems; // { vendor: [kode,...] }
   await attachFilesToPembelian();
+  if(typeof refreshCartItems==="function") refreshCartItems();
+  // Refresh checkbox barang vendor bila form vendor sedang tidak dalam mode edit
+  if(typeof renderVendorItemsCheckboxes==="function" && !state.editingVendorKode){
+    renderVendorItemsCheckboxes([]);
+  }
 }
 
 // Muat ulang transaksi + pembelian (untuk sinkronisasi SJ <-> auto-stock).
@@ -1609,11 +1617,39 @@ function renderTagihanSelesai(){
 function renderCartRows(){
   if(document.getElementById("cart-rows").children.length===0)addCartRow();
 }
+// Daftar barang milik vendor tertentu (relasi vendor_items).
+// Jika vendor belum punya relasi sama sekali, tampilkan semua barang (fallback).
+function itemsForVendor(vendorKode){
+  if(!vendorKode) return [];
+  const list = (DATA.vendorItems||{})[vendorKode];
+  if(!list || list.length===0){
+    // fallback: kalau vendor belum diatur, tampilkan semua barang
+    return DATA.items.slice();
+  }
+  return DATA.items.filter(i=>list.includes(i.kode));
+}
+function cartItemOptions(vendorKode){
+  const items=itemsForVendor(vendorKode);
+  if(items.length===0) return '<option value="">-- Pilih vendor dulu --</option>';
+  return items.map(i=>`<option value="${esc(i.kode)}">${esc(i.nama)}</option>`).join("");
+}
+// Isi ulang opsi barang di semua baris keranjang sesuai vendor terpilih
+function refreshCartItems(){
+  const vendor=document.getElementById("p-vendor").value;
+  document.querySelectorAll(".cart-barang").forEach(sel=>{
+    const cur=sel.value;
+    sel.innerHTML=cartItemOptions(vendor)+'<option value="__new_barang__">+ Tambah barang baru...</option>';
+    if(cur && itemsForVendor(vendor).some(i=>i.kode===cur)) sel.value=cur;
+    sel.dataset.prevValue=sel.value;
+  });
+}
+
 function addCartRow(){
   const box=document.getElementById("cart-rows");
+  const vendor=document.getElementById("p-vendor")?document.getElementById("p-vendor").value:"";
   const row=document.createElement("div");
   row.className="cart-row";
-  row.innerHTML=`<select class="cart-barang">${DATA.items.map(i=>`<option value="${esc(i.kode)}">${esc(i.nama)}</option>`).join("")}<option value="__new_barang__">+ Tambah barang baru...</option></select><input type="number" class="cart-qty" placeholder="Qty" min="1" step="1" /><button type="button" class="rm"><i data-lucide="x"></i></button>`;
+  row.innerHTML=`<select class="cart-barang">${cartItemOptions(vendor)}<option value="__new_barang__">+ Tambah barang baru...</option></select><input type="number" class="cart-qty" placeholder="Qty" min="1" step="1" /><button type="button" class="rm"><i data-lucide="x"></i></button>`;
   const selectEl=row.querySelector(".cart-barang");
   selectEl.dataset.prevValue=selectEl.value;
   row.querySelector(".rm").addEventListener("click",()=>{
@@ -1659,6 +1695,27 @@ function renderVendorList(){
     return `<tr><td class="mono" style="font-weight:600;color:var(--steel-bright);">${esc(v.kode)}</td><td style="font-weight:600;">${esc(v.nama)}</td><td>${esc(v.pic)||"-"}</td><td class="mono">${esc(v.hp)||"-"}</td><td class="sub" style="max-width:220px;">${esc(v.alamat)||"-"}</td><td style="max-width:220px;">${ketHtml}</td><td style="text-align:right"><div class="row-actions" style="justify-content:flex-end;"><button class="btn btn-secondary btn-sm" data-edit-vendor="${esc(v.kode)}">Edit</button><button class="btn btn-secondary btn-sm" data-del-vendor="${esc(v.kode)}" ${delTxt} ${delStyle}>Hapus</button></div></td></tr>`;
   }).join("");
 }
+// Render daftar checkbox barang yang disuplai vendor
+function renderVendorItemsCheckboxes(selected){
+  const box=document.getElementById("v-items");
+  if(!box) return;
+  const sel=new Set(selected||[]);
+  if(DATA.items.length===0){
+    box.innerHTML='<div class="sub" style="padding:8px 0;">Belum ada data barang.</div>';
+    return;
+  }
+  box.innerHTML=DATA.items.map(it=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--line);">
+      <input type="checkbox" class="v-item-chk" value="${esc(it.kode)}" ${sel.has(it.kode)?"checked":""} style="width:auto;" />
+      <span class="mono" style="color:var(--steel-bright);font-weight:600;">${esc(it.kode)}</span>
+      <span>${esc(it.nama)}</span>
+      <span class="sub">${esc(it.satuan||"")}</span>
+    </label>`).join("");
+}
+function getCheckedVendorItems(){
+  return Array.from(document.querySelectorAll("#v-items .v-item-chk:checked")).map(c=>c.value);
+}
+
 function resetVendorForm(){
   document.getElementById("v-kode").value="";
   document.getElementById("v-nama").value="";
@@ -1668,6 +1725,7 @@ function resetVendorForm(){
   document.getElementById("v-ket").value="";
   document.getElementById("v-kode").disabled=false;
   state.editingVendorKode=null;
+  renderVendorItemsCheckboxes([]);
   document.getElementById("btn-vendor-save").textContent="Simpan Vendor";
   const vHint=document.getElementById("vendor-mode-hint");
 vHint.innerHTML=`<i data-lucide="pencil-line"></i> Tambah Vendor Baru`;
@@ -1683,6 +1741,7 @@ function loadVendorToForm(kode){
   document.getElementById("v-hp").value=v.hp||"";
   document.getElementById("v-alamat").value=v.alamat||"";
   document.getElementById("v-ket").value=v.keterangan||"";
+  renderVendorItemsCheckboxes((DATA.vendorItems||{})[kode]||[]);
   state.editingVendorKode=kode;
   document.getElementById("btn-vendor-save").textContent="Update Vendor";
   const vHint=document.getElementById("vendor-mode-hint");
@@ -3394,21 +3453,27 @@ document.getElementById("form-vendor").addEventListener("submit",async e=>{
   const hp=document.getElementById("v-hp").value.trim();
   const alamat=document.getElementById("v-alamat").value.trim();
   const keterangan=document.getElementById("v-ket").value.trim();
+  const kodeFinal = state.editingVendorKode || kode;
   if(state.editingVendorKode){
     if(!DATA.vendors[state.editingVendorKode]){alertModal("Vendor tidak ditemukan","");resetVendorForm();return;}
     const res=await dbSaveVendor({kode:state.editingVendorKode,nama,pic,hp,alamat,keterangan});
     if(res.error){alertModal("Gagal menyimpan",esc(res.error.message));return;}
     logAudit("update","Vendor",state.editingVendorKode,nama);
     toast("Vendor diperbarui","success",nama);
-    resetVendorForm();
   }else{
     if(DATA.vendors[kode]){alertModal("Kode sudah dipakai",`Vendor "${kode}" sudah ada.`);return;}
     const res=await dbSaveVendor({kode,nama,pic,hp,alamat,keterangan});
     if(res.error){alertModal("Gagal menyimpan",esc(res.error.message));return;}
     logAudit("create","Vendor",kode,nama);
     toast("Vendor ditambahkan","success",nama);
-    resetVendorForm();
   }
+  // Simpan relasi barang yang disuplai
+  if(typeof dbSetVendorItems==="function"){
+    const kodeBarang=getCheckedVendorItems();
+    const resItem=await dbSetVendorItems(kodeFinal, kodeBarang);
+    if(resItem.error){alertModal("Gagal menyimpan barang vendor",esc(resItem.error.message));return;}
+  }
+  resetVendorForm();
   await loadMasterData();
   render();
 });
@@ -3496,6 +3561,8 @@ document.getElementById("pic-list").addEventListener("click",e=>{
 });
 document.getElementById("p-tgl").value=fmtInputDate(TODAY);
 document.getElementById("p-jam").value=nowHHMM();
+// Saat vendor dipilih, tampilkan hanya barang milik vendor itu di keranjang
+document.getElementById("p-vendor").addEventListener("change",()=>{ refreshCartItems(); });
 // Bersihkan form Terima Barang & SJ secara menyeluruh (field, cart, file, preview).
 function resetFormSJ(){
   state.fotoSJFiles=[];
@@ -3837,6 +3904,7 @@ applyTheme(getTheme());
 applySidebarPrefs();
 if(window.lucide&&lucide.createIcons)lucide.createIcons();
 renderCartRows();
+renderVendorItemsCheckboxes([]);
 (async function checkExistingSession(){
   try{
     if(!isSupabaseConfigured())return;

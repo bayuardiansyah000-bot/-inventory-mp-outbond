@@ -60,6 +60,31 @@ async function dbDeleteVendor(kode){
   return await sb.from("vendors").delete().eq("kode", kode);
 }
 
+// ---------- VENDOR <-> BARANG ----------
+// Kembalikan map: vendor -> [kode barang]
+async function dbLoadVendorItems(){
+  var sb = supabaseClient();
+  if(!sb) return {};
+  var res = await sb.from("vendor_items").select("vendor,kode_barang");
+  if(res.error){ console.error("dbLoadVendorItems:", res.error); return {}; }
+  var map = {};
+  (res.data||[]).forEach(r=>{
+    (map[r.vendor] = map[r.vendor] || []).push(r.kode_barang);
+  });
+  return map;
+}
+
+async function dbSetVendorItems(vendor, kodeList){
+  var sb = supabaseClient();
+  if(!sb) return { error:{message:"Supabase belum dikonfigurasi"} };
+  // hapus relasi lama, lalu insert ulang
+  var del = await sb.from("vendor_items").delete().eq("vendor", vendor);
+  if(del.error) return { error:del.error };
+  if(!kodeList || kodeList.length===0) return { data:true };
+  var rows = kodeList.map(k=>({ vendor:vendor, kode_barang:k }));
+  return await sb.from("vendor_items").insert(rows);
+}
+
 // ---------- PIC ----------
 async function dbLoadPic(){
   var sb = supabaseClient();
