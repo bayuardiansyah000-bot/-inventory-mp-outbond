@@ -142,7 +142,8 @@ async function dbLoadTransaksi(){
     bagian:r.bagian,
     refKey:r.ref_key,
     refSJ:r.ref_key?r.ref_key.split("::")[1]:null,
-    createdBy:r.created_by
+    createdBy:r.created_by,
+    createdAt:r.created_at?new Date(r.created_at):null
   }));
 }
 
