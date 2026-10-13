@@ -3634,27 +3634,6 @@ document.getElementById("riwayat-tagihan-search").addEventListener("input",e=>{
 document.getElementById("riwayat-tagihan-bulan").addEventListener("change",e=>{
   state.tagihanBulan=e.target.value;renderTagihanSelesai();
 });
-document.getElementById("btn-csv-berjalan").addEventListener("click",()=>{
-  const rows=pembelianGroups().filter(g=>!g.lunas).map(g=>[
-    g.sj,vendorNama(g.vendor),groupItemsLabel(g),
-    g.invoice||"-",
-    g.tglInvoiceDatang?fmtTgl(g.tglInvoiceDatang):"-",
-    g.total,
-    ["Menunggu Invoice","Invoice Masuk","Di Finance"][groupStageIndex(g)]
-  ]);
-  downloadCSV("tagihan-berjalan.csv",["No SJ","Vendor","Barang","Invoice","Tgl Invoice","Total","Status"],rows);
-  toast("CSV diunduh","success","tagihan-berjalan.csv");
-});
-document.getElementById("btn-csv-tagihan").addEventListener("click",()=>{
-  const rows=pembelianGroups().filter(g=>g.lunas).map(g=>[
-    g.sj,vendorNama(g.vendor),groupItemsLabel(g),
-    g.invoice||"-",
-    g.tglInvoiceDatang?fmtTgl(g.tglInvoiceDatang):"-",
-    g.total,fmtTgl(g.tglLunas)
-  ]);
-  downloadCSV("riwayat-tagihan.csv",["No SJ","Vendor","Barang","Invoice","Tgl Invoice","Total","Tgl Lunas"],rows);
-  toast("CSV diunduh","success","riwayat-tagihan.csv");
-});
 document.getElementById("l-dari").value=fmtInputDate(state.laporanFrom);
 document.getElementById("l-sampai").value=fmtInputDate(state.laporanTo);
 
