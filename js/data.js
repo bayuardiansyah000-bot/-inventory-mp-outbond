@@ -134,6 +134,7 @@ async function dbLoadTransaksi(){
   return (res.data||[]).map(r=>({
     id:r.id,
     tanggal:new Date(r.tanggal+"T00:00:00"),
+    jam:r.jam?String(r.jam).slice(0,5):null,   // 'HH:MM'
     kode:r.kode_barang,
     jenis:r.jenis,
     jumlah:r.jumlah,
@@ -152,6 +153,7 @@ async function dbInsertTransaksi(t){
   if(!sb) return { error:{message:"Supabase belum dikonfigurasi"} };
   var row = {
     tanggal:_dateToStr(t.tanggal),
+    jam:t.jam||null,
     kode_barang:t.kode,
     jenis:t.jenis,
     jumlah:t.jumlah,
@@ -168,6 +170,7 @@ async function dbUpdateTransaksi(id, t){
   if(!sb) return { error:{message:"Supabase belum dikonfigurasi"} };
   var row = {
     tanggal:_dateToStr(t.tanggal),
+    jam:t.jam||null,
     kode_barang:t.kode,
     jenis:t.jenis,
     jumlah:t.jumlah,

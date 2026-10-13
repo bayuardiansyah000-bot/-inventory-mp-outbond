@@ -535,6 +535,9 @@ async function syncSJToTransaksi(sj,vendor){
   // Apakah SJ ini sebelumnya punya transaksi auto-stock?
   const has=DATA.transaksi.some(t=>t.refKey===key);
   if(!has)return { ok:true }; // SJ tanpa auto-stock tidak ditambah otomatis saat edit
+  // Simpan jam transaksi lama (per kode barang) agar tidak hilang saat rebuild
+  const jamLama={};
+  DATA.transaksi.forEach(t=>{ if(t.refKey===key && t.jam) jamLama[t.kode]=t.jam; });
   // Hapus semua transaksi auto-stock milik SJ ini di DB
   const del=await dbDeleteTransaksiByRefKey(key);
   if(del.error) return { ok:false, error:del.error.message };
@@ -542,7 +545,7 @@ async function syncSJToTransaksi(sj,vendor){
   const rows=DATA.pembelian.filter(r=>sjKey(r.vendor,r.sj)===key);
   for(const r of rows){
     const ins=await dbInsertTransaksi({
-      tanggal:r.tglSJ,kode:r.kode,jenis:"Masuk",jumlah:r.qty,
+      tanggal:r.tglSJ,jam:jamLama[r.kode]||nowHHMM(),kode:r.kode,jenis:"Masuk",jumlah:r.qty,
       pic:"Admin Pembelian",ket:"SJ "+r.sj,refKey:key,bagian:""
     });
     if(ins.error) return { ok:false, error:ins.error.message };
@@ -1481,7 +1484,8 @@ function renderRiwayat(){
       const picSub=picInfoStr(t.pic);
       const delDisabled=isAutoStock||!canDelete();
       const delTitle=isAutoStock?'Dari SJ - hapus lewat tab Pembelian':(!canDelete()?"Hanya Admin yang bisa menghapus":"");
-      const jamHtml=t.createdAt?`<div class="sub mono" style="font-size:10.5px;">${t.createdAt.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</div>`:"";
+      const jamTampil = t.jam ? t.jam : (t.createdAt?t.createdAt.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}):"");
+      const jamHtml=jamTampil?`<div class="sub mono" style="font-size:10.5px;">${esc(jamTampil)}</div>`:"";
       return `<tr><td>${esc(fmtTgl(t.tanggal))}${jamHtml}</td><td class="mono">${esc(t.kode)}</td><td><b>${esc(it?it.nama:t.kode)}</b></td><td><span class="badge ${t.jenis==="Masuk"?"badge-good":"badge-warn"}">${t.jenis==="Masuk"?"IN":"OUT"}</span></td><td style="text-align:right">${t.jumlah} ${esc(it?it.satuan:"")}</td><td>${esc(t.pic)}${picSub?`<div class="sub">${esc(picSub)}</div>`:""}</td><td class="sub">${esc(t.ket)||"-"}${t.bagian?`<div class="sub" style="color:var(--steel-bright);"><i data-lucide="package"></i> ${esc(t.bagian)}</div>`:""}${isAutoStock?'<div class="sub" style="color:var(--steel-bright);"><i data-lucide="link"></i> auto-stock</div>':""}</td><td class="row-actions"><button class="btn btn-secondary" data-edit-transaksi="${idx}">Edit</button><button class="btn btn-secondary" data-del-transaksi="${idx}" ${delDisabled?'disabled title="'+esc(delTitle)+'"':""}>Hapus</button></td></tr>`;
     }).join("");
   }
@@ -3081,7 +3085,7 @@ function openEditTransaksiModal(idx){
     }).join("");
     return html;
   };
-  openModal(`<div class="modal-title">Edit Transaksi</div>${isAutoStock?`<div class="modal-sub" style="background:var(--warn-dim);border-color:var(--warn-border);color:var(--warn);padding:8px 10px;border-radius:8px;"><i data-lucide="link"></i> Transaksi ini berasal dari SJ <b>${esc(t.refSJ)}</b>. Tanggal, barang &amp; qty terkunci — ubah lewat tab Pembelian.</div>`:""}<div class="field"><label>Tanggal</label><input type="date" id="m-t-tgl" value="${fmtInputDate(t.tanggal)}" ${isAutoStock?"disabled":""} /></div><div class="field"><label>Barang</label><select id="m-t-barang" ${isAutoStock?"disabled":""}>${DATA.items.map(i=>`<option value="${esc(i.kode)}" ${i.kode===t.kode?"selected":""}>${esc(i.nama)}</option>`).join("")}</select></div><div class="field"><label>Jenis</label><select id="m-t-jenis" ${isAutoStock?"disabled":""}><option value="Masuk" ${t.jenis==="Masuk"?"selected":""}>IN</option><option value="Keluar" ${t.jenis==="Keluar"?"selected":""}>OUT</option></select></div><div class="field"><label>Qty</label><input type="number" id="m-t-qty" value="${t.jumlah}" min="1" step="1" ${isAutoStock?"disabled":""} /></div><div class="field" id="m-t-bagian-wrap"><label style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>Bagian Pemakaian</span><button type="button" class="btn btn-secondary btn-tiny" id="m-t-kelola-bagian"><i data-lucide="settings"></i> Kelola</button></label><select id="m-t-bagian" ${isAutoStock?"disabled":""}>${buildBagianOptions()}</select></div><div class="field"><label>PIC</label><select id="m-t-pic">${buildPicOptions()}</select></div><div class="field"><label>Keterangan</label><input type="text" id="m-t-ket" value="${esc(t.ket||"")}" ${isAutoStock?"disabled":""} /></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan</button></div>`);
+  openModal(`<div class="modal-title">Edit Transaksi</div>${isAutoStock?`<div class="modal-sub" style="background:var(--warn-dim);border-color:var(--warn-border);color:var(--warn);padding:8px 10px;border-radius:8px;"><i data-lucide="link"></i> Transaksi ini berasal dari SJ <b>${esc(t.refSJ)}</b>. Tanggal, barang &amp; qty terkunci — ubah lewat tab Pembelian.</div>`:""}<div class="field"><label>Tanggal</label><input type="date" id="m-t-tgl" value="${fmtInputDate(t.tanggal)}" ${isAutoStock?"disabled":""} /></div><div class="field"><label>Jam</label><input type="time" id="m-t-jam" value="${esc(t.jam||"")}" ${isAutoStock?"disabled":""} /></div><div class="field"><label>Barang</label><select id="m-t-barang" ${isAutoStock?"disabled":""}>${DATA.items.map(i=>`<option value="${esc(i.kode)}" ${i.kode===t.kode?"selected":""}>${esc(i.nama)}</option>`).join("")}</select></div><div class="field"><label>Jenis</label><select id="m-t-jenis" ${isAutoStock?"disabled":""}><option value="Masuk" ${t.jenis==="Masuk"?"selected":""}>IN</option><option value="Keluar" ${t.jenis==="Keluar"?"selected":""}>OUT</option></select></div><div class="field"><label>Qty</label><input type="number" id="m-t-qty" value="${t.jumlah}" min="1" step="1" ${isAutoStock?"disabled":""} /></div><div class="field" id="m-t-bagian-wrap"><label style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>Bagian Pemakaian</span><button type="button" class="btn btn-secondary btn-tiny" id="m-t-kelola-bagian"><i data-lucide="settings"></i> Kelola</button></label><select id="m-t-bagian" ${isAutoStock?"disabled":""}>${buildBagianOptions()}</select></div><div class="field"><label>PIC</label><select id="m-t-pic">${buildPicOptions()}</select></div><div class="field"><label>Keterangan</label><input type="text" id="m-t-ket" value="${esc(t.ket||"")}" ${isAutoStock?"disabled":""} /></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan</button></div>`);
   const jenisSelect=document.getElementById("m-t-jenis");
   const bagianWrap=document.getElementById("m-t-bagian-wrap");
   const toggleBagian=()=>{
@@ -3113,6 +3117,7 @@ function openEditTransaksiModal(idx){
     }
     const payload={
       tanggal:new Date(tglVal+"T00:00:00"),
+      jam:document.getElementById("m-t-jam").value||t.jam||null,
       kode,jenis,jumlah:qty,
       pic:document.getElementById("m-t-pic").value,
       ket:document.getElementById("m-t-ket").value.trim(),
@@ -3234,6 +3239,12 @@ document.getElementById("l-compare").addEventListener("change",e=>{
 });
 
 document.getElementById("f-tanggal").value=fmtInputDate(TODAY);
+// Default jam = waktu sekarang (HH:MM)
+function nowHHMM(){
+  const d=new Date();
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+document.getElementById("f-jam").value=nowHHMM();
 const fBarangEl=document.getElementById("f-barang");
 fBarangEl.addEventListener("change",()=>{ fBarangEl.dataset.prevValue=fBarangEl.value; });
 document.getElementById("f-pic").addEventListener("change",e=>{
@@ -3253,6 +3264,7 @@ document.getElementById("form-transaksi").addEventListener("submit",async e=>{
   const pic=document.getElementById("f-pic").value.trim();
   const ket=document.getElementById("f-ket").value.trim();
   const tglVal=document.getElementById("f-tanggal").value;
+  const jamVal=document.getElementById("f-jam").value||nowHHMM();
   const bagian=document.getElementById("f-bagian").value;
   if(!kode||!pic){
     alertModal("Data belum lengkap","Lengkapi Barang, QTY, dan PIC dulu.");return;
@@ -3270,6 +3282,7 @@ document.getElementById("form-transaksi").addEventListener("submit",async e=>{
   }
   const payload={
     tanggal:new Date(tglVal+"T00:00:00"),
+    jam:jamVal,
     kode,jenis,jumlah:qty,pic,ket,
     bagian:jenis==="Keluar"?bagian:"",
     refKey:null
@@ -3282,6 +3295,7 @@ document.getElementById("form-transaksi").addEventListener("submit",async e=>{
   document.getElementById("f-qty").value="";
   document.getElementById("f-pic").value="";
   document.getElementById("f-ket").value="";
+  document.getElementById("f-jam").value=nowHHMM();
   await loadTransaksi();
   render();
   toast("Transaksi tersimpan","success",`${jenis} ${qty} ${itemByKode(kode).satuan}`);
@@ -3481,12 +3495,14 @@ document.getElementById("pic-list").addEventListener("click",e=>{
   if(del){deletePic(del.dataset.delPic);return;}
 });
 document.getElementById("p-tgl").value=fmtInputDate(TODAY);
+document.getElementById("p-jam").value=nowHHMM();
 // Bersihkan form Terima Barang & SJ secara menyeluruh (field, cart, file, preview).
 function resetFormSJ(){
   state.fotoSJFiles=[];
   const pSj=document.getElementById("p-sj"); if(pSj)pSj.value="";
   const pVendor=document.getElementById("p-vendor"); if(pVendor)pVendor.value="";
   const pTgl=document.getElementById("p-tgl"); if(pTgl)pTgl.value=fmtInputDate(TODAY);
+  const pJam=document.getElementById("p-jam"); if(pJam)pJam.value=nowHHMM();
   const pFoto=document.getElementById("p-foto"); if(pFoto)pFoto.value="";
   const fp=document.getElementById("foto-preview-box"); if(fp)fp.remove();
   const cartRows=document.querySelectorAll(".cart-row");
@@ -3513,6 +3529,7 @@ document.getElementById("form-fase1").addEventListener("submit",async e=>{
   const vendor=document.getElementById("p-vendor").value;
   const sj=document.getElementById("p-sj").value.trim();
   const tglVal=document.getElementById("p-tgl").value;
+  const jamVal=document.getElementById("p-jam").value||nowHHMM();
   if(!vendor||!sj){alertModal("Data belum lengkap","Pilih vendor dan isi No. Surat Jalan dulu.");return;}
   if(!checkNotFuture(tglVal,"Tgl Barang Datang"))return;
   const normBaru=normalizeSJ(sj);
@@ -3571,7 +3588,7 @@ document.getElementById("form-fase1").addEventListener("submit",async e=>{
     const newRefKey=sjKey(vendor,sj);
     for(const r of cartRows){
       const resTrx=await dbInsertTransaksi({
-        tanggal:tglSJ,kode:r.kode,jenis:"Masuk",jumlah:r.qty,
+        tanggal:tglSJ,jam:jamVal,kode:r.kode,jenis:"Masuk",jumlah:r.qty,
         pic:"Admin Pembelian",ket:"SJ "+sj,refKey:newRefKey,bagian:""
       });
       if(resTrx.error){alertModal("Gagal auto-stock",esc(resTrx.error.message));break;}
