@@ -61,27 +61,28 @@ async function dbDeleteVendor(kode){
 }
 
 // ---------- VENDOR <-> BARANG ----------
-// Kembalikan map: vendor -> [kode barang]
+// Kembalikan map: vendor -> [ {kode, ukuran} ]
 async function dbLoadVendorItems(){
   var sb = supabaseClient();
   if(!sb) return {};
-  var res = await sb.from("vendor_items").select("vendor,kode_barang");
+  var res = await sb.from("vendor_items").select("vendor,kode_barang,ukuran");
   if(res.error){ console.error("dbLoadVendorItems:", res.error); return {}; }
   var map = {};
   (res.data||[]).forEach(r=>{
-    (map[r.vendor] = map[r.vendor] || []).push(r.kode_barang);
+    (map[r.vendor] = map[r.vendor] || []).push({ kode:r.kode_barang, ukuran:r.ukuran||"" });
   });
   return map;
 }
 
-async function dbSetVendorItems(vendor, kodeList){
+// list = [ {kode, ukuran} ]
+async function dbSetVendorItems(vendor, list){
   var sb = supabaseClient();
   if(!sb) return { error:{message:"Supabase belum dikonfigurasi"} };
   // hapus relasi lama, lalu insert ulang
   var del = await sb.from("vendor_items").delete().eq("vendor", vendor);
   if(del.error) return { error:del.error };
-  if(!kodeList || kodeList.length===0) return { data:true };
-  var rows = kodeList.map(k=>({ vendor:vendor, kode_barang:k }));
+  if(!list || list.length===0) return { data:true };
+  var rows = list.map(x=>({ vendor:vendor, kode_barang:x.kode, ukuran:(x.ukuran||null) }));
   return await sb.from("vendor_items").insert(rows);
 }
 
@@ -161,6 +162,7 @@ async function dbLoadTransaksi(){
     tanggal:new Date(r.tanggal+"T00:00:00"),
     jam:r.jam?String(r.jam).slice(0,5):null,   // 'HH:MM'
     kode:r.kode_barang,
+    ukuran:r.ukuran||"",
     jenis:r.jenis,
     jumlah:r.jumlah,
     pic:r.pic,
@@ -180,6 +182,7 @@ async function dbInsertTransaksi(t){
     tanggal:_dateToStr(t.tanggal),
     jam:t.jam||null,
     kode_barang:t.kode,
+    ukuran:t.ukuran||null,
     jenis:t.jenis,
     jumlah:t.jumlah,
     pic:t.pic||null,
@@ -197,6 +200,7 @@ async function dbUpdateTransaksi(id, t){
     tanggal:_dateToStr(t.tanggal),
     jam:t.jam||null,
     kode_barang:t.kode,
+    ukuran:t.ukuran||null,
     jenis:t.jenis,
     jumlah:t.jumlah,
     pic:t.pic||null,
@@ -233,6 +237,7 @@ async function dbLoadPembelian(){
     vendor:r.vendor,
     tglSJ:r.tgl_sj?new Date(r.tgl_sj+"T00:00:00"):null,
     kode:r.kode_barang,
+    ukuran:r.ukuran||"",
     qty:r.qty,
     hargaPcs:r.harga_pcs,
     invoice:r.invoice,
@@ -251,6 +256,7 @@ function _pembelianRow(t){
     vendor:t.vendor,
     tgl_sj:_dateToStr(t.tglSJ),
     kode_barang:t.kode,
+    ukuran:t.ukuran||null,
     qty:t.qty,
     harga_pcs:t.hargaPcs||null,
     invoice:t.invoice||null,

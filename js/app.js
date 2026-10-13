@@ -385,9 +385,9 @@ async function loadMasterData(){
   DATA.vendorItems = vendorItems; // { vendor: [kode,...] }
   await attachFilesToPembelian();
   if(typeof refreshCartItems==="function") refreshCartItems();
-  // Refresh checkbox barang vendor bila form vendor sedang tidak dalam mode edit
-  if(typeof renderVendorItemsCheckboxes==="function" && !state.editingVendorKode){
-    renderVendorItemsCheckboxes([]);
+  // Refresh editor barang vendor bila form vendor sedang tidak dalam mode edit
+  if(typeof renderVendorItemsEditor==="function" && !state.editingVendorKode){
+    renderVendorItemsEditor([]);
   }
 }
 
@@ -534,7 +534,8 @@ function groupStageIndex(g){
 function groupItemsLabel(g){
   return g.items.map(x=>{
     const item=itemByKode(x.kode)||{nama:x.kode,satuan:""};
-    return `${item.nama} (${x.qty} ${item.satuan})`;
+    const uk=x.ukuran?` [${x.ukuran}]`:"";
+    return `${item.nama}${uk} (${x.qty} ${item.satuan})`;
   }).join(" · ");
 }
 
@@ -543,17 +544,17 @@ async function syncSJToTransaksi(sj,vendor){
   // Apakah SJ ini sebelumnya punya transaksi auto-stock?
   const has=DATA.transaksi.some(t=>t.refKey===key);
   if(!has)return { ok:true }; // SJ tanpa auto-stock tidak ditambah otomatis saat edit
-  // Simpan jam transaksi lama (per kode barang) agar tidak hilang saat rebuild
+  // Simpan jam transaksi lama (per kode+ukuran) agar tidak hilang saat rebuild
   const jamLama={};
-  DATA.transaksi.forEach(t=>{ if(t.refKey===key && t.jam) jamLama[t.kode]=t.jam; });
+  DATA.transaksi.forEach(t=>{ if(t.refKey===key && t.jam) jamLama[t.kode+"|"+(t.ukuran||"")]=t.jam; });
   // Hapus semua transaksi auto-stock milik SJ ini di DB
   const del=await dbDeleteTransaksiByRefKey(key);
   if(del.error) return { ok:false, error:del.error.message };
-  // Bangun ulang dari baris pembelian milik SJ ini
+  // Bangun ulang dari baris pembelian milik SJ ini (ukuran ikut dari baris pembelian)
   const rows=DATA.pembelian.filter(r=>sjKey(r.vendor,r.sj)===key);
   for(const r of rows){
     const ins=await dbInsertTransaksi({
-      tanggal:r.tglSJ,jam:jamLama[r.kode]||nowHHMM(),kode:r.kode,jenis:"Masuk",jumlah:r.qty,
+      tanggal:r.tglSJ,jam:jamLama[r.kode+"|"+(r.ukuran||"")]||nowHHMM(),kode:r.kode,ukuran:r.ukuran,jenis:"Masuk",jumlah:r.qty,
       pic:"Admin Pembelian",ket:"SJ "+r.sj,refKey:key,bagian:""
     });
     if(ins.error) return { ok:false, error:ins.error.message };
@@ -1494,7 +1495,8 @@ function renderRiwayat(){
       const delTitle=isAutoStock?'Dari SJ - hapus lewat tab Pembelian':(!canDelete()?"Hanya Admin yang bisa menghapus":"");
       const jamTampil = t.jam ? t.jam : (t.createdAt?t.createdAt.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}):"");
       const jamHtml=jamTampil?`<div class="sub mono" style="font-size:10.5px;">${esc(jamTampil)}</div>`:"";
-      return `<tr><td>${esc(fmtTgl(t.tanggal))}${jamHtml}</td><td class="mono">${esc(t.kode)}</td><td><b>${esc(it?it.nama:t.kode)}</b></td><td><span class="badge ${t.jenis==="Masuk"?"badge-good":"badge-warn"}">${t.jenis==="Masuk"?"IN":"OUT"}</span></td><td style="text-align:right">${t.jumlah} ${esc(it?it.satuan:"")}</td><td>${esc(t.pic)}${picSub?`<div class="sub">${esc(picSub)}</div>`:""}</td><td class="sub">${esc(t.ket)||"-"}${t.bagian?`<div class="sub" style="color:var(--steel-bright);"><i data-lucide="package"></i> ${esc(t.bagian)}</div>`:""}${isAutoStock?'<div class="sub" style="color:var(--steel-bright);"><i data-lucide="link"></i> auto-stock</div>':""}</td><td class="row-actions"><button class="btn btn-secondary" data-edit-transaksi="${idx}">Edit</button><button class="btn btn-secondary" data-del-transaksi="${idx}" ${delDisabled?'disabled title="'+esc(delTitle)+'"':""}>Hapus</button></td></tr>`;
+      const ukHtml=t.ukuran?`<div class="sub" style="font-size:11px;">${esc(t.ukuran)}</div>`:"";
+      return `<tr><td>${esc(fmtTgl(t.tanggal))}${jamHtml}</td><td class="mono">${esc(t.kode)}</td><td><b>${esc(it?it.nama:t.kode)}</b>${ukHtml}</td><td><span class="badge ${t.jenis==="Masuk"?"badge-good":"badge-warn"}">${t.jenis==="Masuk"?"IN":"OUT"}</span></td><td style="text-align:right">${t.jumlah} ${esc(it?it.satuan:"")}</td><td>${esc(t.pic)}${picSub?`<div class="sub">${esc(picSub)}</div>`:""}</td><td class="sub">${esc(t.ket)||"-"}${t.bagian?`<div class="sub" style="color:var(--steel-bright);"><i data-lucide="package"></i> ${esc(t.bagian)}</div>`:""}${isAutoStock?'<div class="sub" style="color:var(--steel-bright);"><i data-lucide="link"></i> auto-stock</div>':""}</td><td class="row-actions"><button class="btn btn-secondary" data-edit-transaksi="${idx}">Edit</button><button class="btn btn-secondary" data-del-transaksi="${idx}" ${delDisabled?'disabled title="'+esc(delTitle)+'"':""}>Hapus</button></td></tr>`;
     }).join("");
   }
   const fromLabel=fmtTgl(state.riwayatFrom);
@@ -1521,10 +1523,11 @@ function renderRiwayat(){
 function itemsDetailHtml(g,priced){
   return g.items.map(it=>{
     const item=itemByKode(it.kode);
+    const uk=it.ukuran?` (${esc(it.ukuran)})`:"";
     const line=priced&&it.hargaPcs
       ?`${it.qty} ${esc(item.satuan)} x ${fmtRupiah(it.hargaPcs)} = ${fmtRupiah(it.qty*it.hargaPcs)}`
       :`${it.qty} ${esc(item.satuan)}`;
-    return `<div class="sub" style="padding:2px 0;">${esc(item.nama)} — ${line}</div>`;
+    return `<div class="sub" style="padding:2px 0;">${esc(item.nama)}${uk} — ${line}</div>`;
   }).join("");
 }
 function vendorCellHtml(g){
@@ -1535,7 +1538,8 @@ function vendorCellHtml(g){
 function itemsCellHtml(g,open){
   const lines=g.items.map(it=>{
     const item=itemByKode(it.kode)||{nama:it.kode,satuan:""};
-    return `<div><b>${esc(item.nama)}</b> <span class="sub">(${it.qty} ${esc(item.satuan)})</span></div>`;
+    const uk=it.ukuran?` <span class="sub" style="font-size:11px;">[${esc(it.ukuran)}]</span>`:"";
+    return `<div><b>${esc(item.nama)}</b>${uk} <span class="sub">(${it.qty} ${esc(item.satuan)})</span></div>`;
   }).join("");
   const toggle=g.items.length>1?`<div class="sub expand-toggle" data-toggle-po="${esc(g.key)}">${open?"▾ sembunyikan rincian harga":"▸ lihat rincian harga"}</div>`:"";
   const detail=open?`<div style="margin-top:4px;">${itemsDetailHtml(g,true)}</div>`:"";
@@ -1617,21 +1621,25 @@ function renderTagihanSelesai(){
 function renderCartRows(){
   if(document.getElementById("cart-rows").children.length===0)addCartRow();
 }
-// Daftar barang milik vendor tertentu (relasi vendor_items).
-// Jika vendor belum punya relasi sama sekali, tampilkan semua barang (fallback).
+// Daftar barang milik vendor: [ {kode, ukuran} ].
+// Jika vendor belum punya relasi sama sekali, fallback ke semua barang (ukuran kosong).
 function itemsForVendor(vendorKode){
   if(!vendorKode) return [];
   const list = (DATA.vendorItems||{})[vendorKode];
   if(!list || list.length===0){
-    // fallback: kalau vendor belum diatur, tampilkan semua barang
-    return DATA.items.slice();
+    return DATA.items.map(i=>({ kode:i.kode, ukuran:"" }));
   }
-  return DATA.items.filter(i=>list.includes(i.kode));
+  return list.slice();
 }
+// Nilai opsi = index (bukan kode) karena 1 kode bisa punya >1 ukuran
 function cartItemOptions(vendorKode){
-  const items=itemsForVendor(vendorKode);
-  if(items.length===0) return '<option value="">-- Pilih vendor dulu --</option>';
-  return items.map(i=>`<option value="${esc(i.kode)}">${esc(i.nama)}</option>`).join("");
+  const list=itemsForVendor(vendorKode);
+  if(list.length===0) return '<option value="">-- Pilih vendor dulu --</option>';
+  return list.map((x,idx)=>{
+    const it=itemByKode(x.kode)||{nama:x.kode,satuan:""};
+    const label=it.nama+(x.ukuran?` (${x.ukuran})`:"");
+    return `<option value="${idx}">${esc(label)}</option>`;
+  }).join("");
 }
 // Isi ulang opsi barang di semua baris keranjang sesuai vendor terpilih
 function refreshCartItems(){
@@ -1639,7 +1647,7 @@ function refreshCartItems(){
   document.querySelectorAll(".cart-barang").forEach(sel=>{
     const cur=sel.value;
     sel.innerHTML=cartItemOptions(vendor)+'<option value="__new_barang__">+ Tambah barang baru...</option>';
-    if(cur && itemsForVendor(vendor).some(i=>i.kode===cur)) sel.value=cur;
+    if(cur && cur!=="__new_barang__" && Number(cur) < itemsForVendor(vendor).length) sel.value=cur;
     sel.dataset.prevValue=sel.value;
   });
 }
@@ -1658,10 +1666,19 @@ function addCartRow(){
   });
   selectEl.addEventListener("change",()=>{
     if(selectEl.value==="__new_barang__"){
-      selectEl.value=selectEl.dataset.prevValue||(DATA.items[0]?DATA.items[0].kode:"");
+      selectEl.value=selectEl.dataset.prevValue||"";
       openKelolaBarangModal({afterAdd:newKode=>{
-        selectEl.value=newKode;
-        selectEl.dataset.prevValue=newKode;
+        // tambahkan barang baru ke katalog vendor ini, lalu muat ulang opsi
+        (async ()=>{
+          const vendor=document.getElementById("p-vendor").value;
+          const cur=(DATA.vendorItems||{})[vendor]||[];
+          cur.push({kode:newKode,ukuran:""});
+          await dbSetVendorItems(vendor,cur);
+          await loadMasterData();
+          refreshCartItems();
+          selectEl.value=String(itemsForVendor(vendor).findIndex(x=>x.kode===newKode));
+          selectEl.dataset.prevValue=selectEl.value;
+        })();
       }});
     }else{
       selectEl.dataset.prevValue=selectEl.value;
@@ -1695,25 +1712,56 @@ function renderVendorList(){
     return `<tr><td class="mono" style="font-weight:600;color:var(--steel-bright);">${esc(v.kode)}</td><td style="font-weight:600;">${esc(v.nama)}</td><td>${esc(v.pic)||"-"}</td><td class="mono">${esc(v.hp)||"-"}</td><td class="sub" style="max-width:220px;">${esc(v.alamat)||"-"}</td><td style="max-width:220px;">${ketHtml}</td><td style="text-align:right"><div class="row-actions" style="justify-content:flex-end;"><button class="btn btn-secondary btn-sm" data-edit-vendor="${esc(v.kode)}">Edit</button><button class="btn btn-secondary btn-sm" data-del-vendor="${esc(v.kode)}" ${delTxt} ${delStyle}>Hapus</button></div></td></tr>`;
   }).join("");
 }
-// Render daftar checkbox barang yang disuplai vendor
-function renderVendorItemsCheckboxes(selected){
+// Kumpulkan semua ukuran yang pernah dipakai (untuk saran input)
+function allUkuranSuggestions(){
+  const set=new Set();
+  Object.values(DATA.vendorItems||{}).forEach(list=>{
+    (list||[]).forEach(x=>{ if(x.ukuran) set.add(x.ukuran); });
+  });
+  DATA.pembelian.forEach(r=>{ if(r.ukuran) set.add(r.ukuran); });
+  return [...set];
+}
+
+// Render editor daftar barang vendor: tiap baris = dropdown barang + input ukuran
+function renderVendorItemsEditor(list){
   const box=document.getElementById("v-items");
   if(!box) return;
-  const sel=new Set(selected||[]);
   if(DATA.items.length===0){
-    box.innerHTML='<div class="sub" style="padding:8px 0;">Belum ada data barang.</div>';
+    box.innerHTML='<div class="sub" style="padding:8px 0;">Belum ada data barang. Tambah barang di Master Barang dulu.</div>';
     return;
   }
-  box.innerHTML=DATA.items.map(it=>`
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--line);">
-      <input type="checkbox" class="v-item-chk" value="${esc(it.kode)}" ${sel.has(it.kode)?"checked":""} style="width:auto;" />
-      <span class="mono" style="color:var(--steel-bright);font-weight:600;">${esc(it.kode)}</span>
-      <span>${esc(it.nama)}</span>
-      <span class="sub">${esc(it.satuan||"")}</span>
-    </label>`).join("");
+  const items=list||[];
+  const opts=DATA.items.map(it=>`<option value="${esc(it.kode)}">${esc(it.kode)} - ${esc(it.nama)}</option>`).join("");
+  const ukSug=allUkuranSuggestions().map(u=>`<option value="${esc(u)}"></option>`).join("");
+  if(items.length===0){
+    box.innerHTML='<div class="sub" style="padding:8px 0;">Belum ada barang. Klik "+ Tambah Barang".</div>';
+    return;
+  }
+  box.innerHTML=items.map((x,i)=>`
+    <div class="v-item-row" style="display:grid;grid-template-columns:1.4fr 1.2fr 30px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);">
+      <select class="v-item-kode" style="border:1px solid var(--line);border-radius:9px;padding:7px 9px;font-size:12.5px;background:var(--surface);color:var(--ink);">${opts}</select>
+      <input type="text" class="v-item-ukuran" list="ukuran-suggest" placeholder="Type/Ukuran" value="${esc(x.ukuran||"")}" style="border:1px solid var(--line);border-radius:9px;padding:7px 9px;font-size:12.5px;background:var(--surface);color:var(--ink);" />
+      <button type="button" class="v-item-del" title="Hapus" style="border:none;background:none;color:var(--ink-faint);cursor:pointer;font-size:15px;"><i data-lucide="x"></i></button>
+    </div>`).join("")+`<datalist id="ukuran-suggest">${ukSug}</datalist>`;
+  // set nilai dropdown sesuai data
+  const rows=box.querySelectorAll(".v-item-row");
+  rows.forEach((row,i)=>{
+    const sel=row.querySelector(".v-item-kode");
+    if(items[i] && items[i].kode) sel.value=items[i].kode;
+    row.querySelector(".v-item-del").addEventListener("click",()=>{
+      const cur=getVendorItemsFromEditor();
+      cur.splice(i,1);
+      renderVendorItemsEditor(cur);
+    });
+  });
+  refreshIcons();
 }
-function getCheckedVendorItems(){
-  return Array.from(document.querySelectorAll("#v-items .v-item-chk:checked")).map(c=>c.value);
+// Baca daftar barang dari editor
+function getVendorItemsFromEditor(){
+  return Array.from(document.querySelectorAll("#v-items .v-item-row")).map(row=>({
+    kode:row.querySelector(".v-item-kode").value,
+    ukuran:row.querySelector(".v-item-ukuran").value.trim()
+  })).filter(x=>x.kode);
 }
 
 function resetVendorForm(){
@@ -1725,7 +1773,7 @@ function resetVendorForm(){
   document.getElementById("v-ket").value="";
   document.getElementById("v-kode").disabled=false;
   state.editingVendorKode=null;
-  renderVendorItemsCheckboxes([]);
+  renderVendorItemsEditor([]);
   document.getElementById("btn-vendor-save").textContent="Simpan Vendor";
   const vHint=document.getElementById("vendor-mode-hint");
 vHint.innerHTML=`<i data-lucide="pencil-line"></i> Tambah Vendor Baru`;
@@ -1741,7 +1789,7 @@ function loadVendorToForm(kode){
   document.getElementById("v-hp").value=v.hp||"";
   document.getElementById("v-alamat").value=v.alamat||"";
   document.getElementById("v-ket").value=v.keterangan||"";
-  renderVendorItemsCheckboxes((DATA.vendorItems||{})[kode]||[]);
+  renderVendorItemsEditor((DATA.vendorItems||{})[kode]||[]);
   state.editingVendorKode=kode;
   document.getElementById("btn-vendor-save").textContent="Update Vendor";
   const vHint=document.getElementById("vendor-mode-hint");
@@ -2260,11 +2308,12 @@ function renderLaporanPembelian(){
     const it=itemByKode(r.kode)||{nama:r.kode,satuan:""};
     const sub=(r.qty||0)*(r.hargaPcs||0);
     total+=sub; sjs.add(r.vendor+"::"+normalizeSJ(r.sj)); vendors.add(r.vendor);
+    const uk=r.ukuran?` <span class="sub" style="font-size:11px;">[${esc(r.ukuran)}]</span>`:"";
     return `<tr>
       <td>${esc(fmtTgl(r.tglSJ))}</td>
       <td class="mono">${esc(r.sj)}</td>
       <td>${esc(vendorNama(r.vendor))}</td>
-      <td><b>${esc(it.nama)}</b></td>
+      <td><b>${esc(it.nama)}</b>${uk}</td>
       <td style="text-align:right">${r.qty} ${esc(it.satuan)}</td>
       <td style="text-align:right">${r.hargaPcs?fmtRupiahLaporan(r.hargaPcs):"-"}</td>
       <td style="text-align:right">${sub?fmtRupiahLaporan(sub):"-"}</td>
@@ -2330,9 +2379,9 @@ function csvLaporanPembelian(){
   rows=rows.slice().sort((a,b)=>b.tglSJ-a.tglSJ);
   const out=rows.map(r=>{
     const it=itemByKode(r.kode)||{nama:r.kode,satuan:""};
-    return [fmtTgl(r.tglSJ), r.sj, vendorNama(r.vendor), it.nama, r.qty, it.satuan, r.hargaPcs||0, (r.qty||0)*(r.hargaPcs||0)];
+    return [fmtTgl(r.tglSJ), r.sj, vendorNama(r.vendor), it.nama, r.ukuran||"", r.qty, it.satuan, r.hargaPcs||0, (r.qty||0)*(r.hargaPcs||0)];
   });
-  downloadCSV("laporan-pembelian.csv",["Tgl Datang","No SJ","Vendor","Barang","Qty","Satuan","Harga","Subtotal"],out);
+  downloadCSV("laporan-pembelian.csv",["Tgl Datang","No SJ","Vendor","Barang","Type/Ukuran","Qty","Satuan","Harga","Subtotal"],out);
   toast("CSV diunduh","success","laporan-pembelian.csv");
 }
 function csvLaporanPembayaran(){
@@ -2842,15 +2891,16 @@ function openInvoiceModal(key){
   const existingFiles=[...(g.fotoInvoiceFiles||[])];
   const rowsHtml=g.items.map(it=>{
     const item=itemByKode(it.kode);
-    return `<div class="item-row"><div class="item-name">${esc(item.nama)}<span class="item-sub"> — ${it.qty} ${esc(item.satuan)}</span></div><span class="sub">Harga / ${esc(item.satuan)}</span><input type="number" class="m-harga" data-kode="${esc(it.kode)}" min="1" placeholder="0" value="${it.hargaPcs||""}" /></div>`;
+    const ukey=it.kode+"|"+(it.ukuran||"");
+    return `<div class="item-row"><div class="item-name">${esc(item.nama)}${it.ukuran?` <span class="sub">(${esc(it.ukuran)})</span>`:""}<span class="item-sub"> — ${it.qty} ${esc(item.satuan)}</span></div><span class="sub">Harga / ${esc(item.satuan)}</span><input type="number" class="m-harga" data-ukey="${esc(ukey)}" min="1" placeholder="0" value="${it.hargaPcs||""}" /></div>`;
   }).join("");
   openModal(`<div class="modal-title">Input Invoice — ${esc(g.sj)}</div><div class="modal-sub">${esc(vendorNama(g.vendor))}</div><div class="field"><label>Tgl Invoice Datang</label><input type="date" id="m-tgl-inv" value="${g.tglInvoiceDatang?fmtInputDate(g.tglInvoiceDatang):fmtInputDate(TODAY)}" /></div><div class="field"><label>No. Invoice</label><input type="text" id="m-no-inv" placeholder="INV-xxxx" value="${esc(g.invoice||"")}" /></div><div class="field"><label>Upload Foto Invoice (bisa pilih >1 file)</label><input type="file" id="m-inv-files" accept="image/*,application/pdf" multiple /><div class="helper">JPG, PNG, atau PDF. Maks 8MB per file. Gambar otomatis dikompres.</div><div class="file-preview-box" id="m-inv-preview"></div></div><div class="field"><label>Harga per Barang</label>${rowsHtml}</div><div class="modal-total" id="m-total">Total: Rp 0</div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan</button></div>`);
   renderFileChips(document.getElementById("m-inv-preview"),existingFiles);
   function recompute(){
     let total=0;
     document.querySelectorAll(".m-harga").forEach(inp=>{
-      const it=g.items.find(x=>x.kode===inp.dataset.kode);
-      total+=it.qty*(parseInt(inp.value,10)||0);
+      const it=g.items.find(x=>x.kode+"|"+(x.ukuran||"")===inp.dataset.ukey);
+      if(it) total+=it.qty*(parseInt(inp.value,10)||0);
     });
     document.getElementById("m-total").textContent="Total: "+fmtRupiah(total);
   }
@@ -2873,7 +2923,7 @@ function openInvoiceModal(key){
     document.querySelectorAll(".m-harga").forEach(inp=>{
       const v=parseInt(inp.value,10)||0;
       if(v<=0)anyZero=true;
-      hargaMap[inp.dataset.kode]=v;
+      hargaMap[inp.dataset.ukey]=v;
     });
     if(anyZero){alertModal("Harga belum lengkap","Semua harga barang harus > 0.");return;}
     const doSave=async ()=>{
@@ -2887,9 +2937,10 @@ function openInvoiceModal(key){
         }
       }
       for(const it of g.items){
+        const ukey=it.kode+"|"+(it.ukuran||"");
         const payload={
-          sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, qty:it.qty,
-          hargaPcs:(hargaMap[it.kode]!=null)?hargaMap[it.kode]:it.hargaPcs,
+          sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
+          hargaPcs:(hargaMap[ukey]!=null)?hargaMap[ukey]:it.hargaPcs,
           invoice:noInv,
           tglInvoiceDatang:tglInv,
           tglFinance:it.tglFinance,
@@ -2928,7 +2979,7 @@ function openFinanceModal(key){
     const tgl=new Date(tglVal+"T00:00:00");
     for(const it of g.items){
       const payload={
-        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, qty:it.qty,
+        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
         hargaPcs:it.hargaPcs, invoice:it.invoice, tglInvoiceDatang:it.tglInvoiceDatang,
         tglFinance:tgl, lunas:it.lunas, tglLunas:it.tglLunas, buktiLunas:it.buktiLunas
       };
@@ -2976,7 +3027,7 @@ function openLunasModal(key){
     }
     for(const it of g.items){
       const payload={
-        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, qty:it.qty,
+        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
         hargaPcs:it.hargaPcs, invoice:it.invoice, tglInvoiceDatang:it.tglInvoiceDatang,
         tglFinance:it.tglFinance, lunas:true, tglLunas:tgl, buktiLunas:bukti
       };
@@ -2999,7 +3050,8 @@ function openEditPembelianModal(key){
   const lunasFiles=[...(g.buktiLunasFiles||[])];
   const rowsHtml=g.items.map(it=>{
     const item=itemByKode(it.kode);
-    return `<div class="item-row"><div class="item-name">${esc(item.nama)}</div><span class="sub">Qty (${esc(item.satuan)})</span><input type="number" class="m-qty" data-kode="${esc(it.kode)}" value="${it.qty}" min="1" step="1" /><span class="sub">Harga/${esc(item.satuan)}</span><input type="number" class="m-harga2" data-kode="${esc(it.kode)}" value="${it.hargaPcs||""}" min="0" /></div>`;
+    const ukey=it.kode+"|"+(it.ukuran||"");
+    return `<div class="item-row"><div class="item-name">${esc(item.nama)}${it.ukuran?` <span class="sub">(${esc(it.ukuran)})</span>`:""}</div><span class="sub">Qty (${esc(item.satuan)})</span><input type="number" class="m-qty" data-ukey="${esc(ukey)}" value="${it.qty}" min="1" step="1" /><span class="sub">Harga/${esc(item.satuan)}</span><input type="number" class="m-harga2" data-ukey="${esc(ukey)}" value="${it.hargaPcs||""}" min="0" /></div>`;
   }).join("");
   const lunasSection=g.lunas?`<div class="field" style="border-top:1px solid var(--line);padding-top:14px;"><label>Bukti Lunas</label><input type="file" id="m-edit-lunas-files" accept="image/*,application/pdf" multiple /><div class="helper">Tambah file baru. File lama tetap ada.</div><div class="file-preview-box" id="m-edit-lunas-preview"></div></div>`:"";
   openModal(`<div class="modal-title">Edit — ${esc(g.sj)}</div><div class="modal-sub">${esc(vendorNama(g.vendor))} · Perbaiki data jika salah input</div><div class="field"><label>Tgl Barang Datang</label><input type="date" id="m-edit-tgl" value="${fmtInputDate(g.tglSJ)}" /></div><div class="field"><label>No. Surat Jalan</label><input type="text" id="m-edit-sj" value="${esc(g.sj)}" /></div><div class="field"><label>Vendor</label><select id="m-edit-vendor">${Object.values(DATA.vendors).map(v=>`<option value="${esc(v.kode)}" ${v.kode===g.vendor?"selected":""}>${esc(v.nama)}</option>`).join("")}</select></div><div class="field"><label>Foto SJ (tambah file baru)</label><input type="file" id="m-edit-sj-files" accept="image/*,application/pdf" multiple /><div class="file-preview-box" id="m-edit-sj-preview"></div></div><div class="field"><label>No. Invoice</label><input type="text" id="m-edit-inv" value="${esc(g.invoice||"")}" placeholder="INV-xxxx" /></div><div class="field"><label>Foto Invoice (tambah file baru)</label><input type="file" id="m-edit-inv-files" accept="image/*,application/pdf" multiple /><div class="file-preview-box" id="m-edit-inv-preview"></div></div><div class="field"><label>Tgl Invoice Datang</label><input type="date" id="m-edit-inv-tgl" value="${g.tglInvoiceDatang?fmtInputDate(g.tglInvoiceDatang):""}" /></div><div class="field"><label>Tgl Diserahkan ke Finance</label><input type="date" id="m-edit-fin-tgl" value="${g.tglFinance?fmtInputDate(g.tglFinance):""}" /></div><div class="field"><label>Barang</label>${rowsHtml}</div>${lunasSection}<div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan Perubahan</button></div>`);
@@ -3046,14 +3098,15 @@ function openEditPembelianModal(key){
     let qtyTakValid=null;
     document.querySelectorAll(".m-qty").forEach(inp=>{
       const n=parseNumber(inp.value);
-      qtyMap[inp.dataset.kode]=n;
-      if(qtyTakValid===null&&(!isValidInt(n)||n<=0))qtyTakValid=inp.dataset.kode;
+      qtyMap[inp.dataset.ukey]=n;
+      if(qtyTakValid===null&&(!isValidInt(n)||n<=0))qtyTakValid=inp.dataset.ukey;
     });
     document.querySelectorAll(".m-harga2").forEach(inp=>{
-      hargaMap[inp.dataset.kode]=parseInt(inp.value,10)||0;
+      hargaMap[inp.dataset.ukey]=parseInt(inp.value,10)||0;
     });
     if(qtyTakValid!==null){
-      const nm=itemByKode(qtyTakValid)?itemByKode(qtyTakValid).nama:qtyTakValid;
+      const kk=String(qtyTakValid).split("|")[0];
+      const nm=itemByKode(kk)?itemByKode(kk).nama:kk;
       alertModal("Jumlah tidak valid",`Jumlah untuk <b>${esc(nm)}</b> harus berupa bilangan bulat positif.`);return;
     }
     const sjBerubah=sjBaru!==g.sj;
@@ -3071,10 +3124,11 @@ function openEditPembelianModal(key){
       const newKey=sjKey(vendor,sjBaru);
       // Update setiap baris pembelian (berdasarkan id)
       for(const it of g.items){
+        const ukey=it.kode+"|"+(it.ukuran||"");
         const payload={
-          sj:sjBaru, vendor, tglSJ:tgl, kode:it.kode,
-          qty:(qtyMap[it.kode]||it.qty),
-          hargaPcs:(hargaMap[it.kode]!=null&&hargaMap[it.kode]>0)?hargaMap[it.kode]:null,
+          sj:sjBaru, vendor, tglSJ:tgl, kode:it.kode, ukuran:it.ukuran,
+          qty:(qtyMap[ukey]||it.qty),
+          hargaPcs:(hargaMap[ukey]!=null&&hargaMap[ukey]>0)?hargaMap[ukey]:null,
           invoice:inv||null,
           tglInvoiceDatang:invTglVal?new Date(invTglVal+"T00:00:00"):null,
           tglFinance:finTglVal?new Date(finTglVal+"T00:00:00"):null,
@@ -3467,10 +3521,10 @@ document.getElementById("form-vendor").addEventListener("submit",async e=>{
     logAudit("create","Vendor",kode,nama);
     toast("Vendor ditambahkan","success",nama);
   }
-  // Simpan relasi barang yang disuplai
+  // Simpan relasi barang yang disuplai (kode + ukuran)
   if(typeof dbSetVendorItems==="function"){
-    const kodeBarang=getCheckedVendorItems();
-    const resItem=await dbSetVendorItems(kodeFinal, kodeBarang);
+    const listBarang=getVendorItemsFromEditor();
+    const resItem=await dbSetVendorItems(kodeFinal, listBarang);
     if(resItem.error){alertModal("Gagal menyimpan barang vendor",esc(resItem.error.message));return;}
   }
   resetVendorForm();
@@ -3478,6 +3532,11 @@ document.getElementById("form-vendor").addEventListener("submit",async e=>{
   render();
 });
 document.getElementById("btn-vendor-reset").addEventListener("click",()=>resetVendorForm());
+document.getElementById("v-add-item").addEventListener("click",()=>{
+  const cur=getVendorItemsFromEditor();
+  cur.push({kode:(DATA.items[0]?DATA.items[0].kode:""),ukuran:""});
+  renderVendorItemsEditor(cur);
+});
 document.getElementById("vendor-search").addEventListener("input",e=>{
   state.vendorSearch=e.target.value;renderVendorList();
 });
@@ -3605,12 +3664,18 @@ document.getElementById("form-fase1").addEventListener("submit",async e=>{
     alertModal("Surat Jalan sudah ada",`SJ <b>${esc(sj)}</b> dari <b>${esc(vendorNama(vendor))}</b> sudah diinput (${fmtTgl(sjDobel.tglSJ)}).`);
     return;
   }
-  const rawRows=Array.from(document.querySelectorAll(".cart-row")).map(r=>({
-    kode:r.querySelector(".cart-barang").value,
-    qtyRaw:r.querySelector(".cart-qty").value.trim()
-  }));
+  const katalog=itemsForVendor(vendor); // [ {kode, ukuran} ]
+  const rawRows=Array.from(document.querySelectorAll(".cart-row")).map(r=>{
+    const sel=r.querySelector(".cart-barang").value;
+    const entry=(sel!=="__new_barang__" && sel!=="" && Number(sel) < katalog.length)?katalog[Number(sel)]:null;
+    return {
+      kode:entry?entry.kode:"",
+      ukuran:entry?entry.ukuran:"",
+      qtyRaw:r.querySelector(".cart-qty").value.trim()
+    };
+  });
   for(const r of rawRows){
-    if(r.kode==="__new_barang__"||r.qtyRaw==="")continue;
+    if(!r.kode||r.qtyRaw==="")continue;
     const n=parseNumber(r.qtyRaw);
     if(!isValidInt(n)||n<=0){
       const nm=itemByKode(r.kode)?itemByKode(r.kode).nama:r.kode;
@@ -3619,22 +3684,25 @@ document.getElementById("form-fase1").addEventListener("submit",async e=>{
   }
   const cartRows=rawRows.map(r=>({
     kode:r.kode,
+    ukuran:r.ukuran,
     qty:parseNumber(r.qtyRaw)
-  })).filter(r=>r.qty>0&&r.kode&&r.kode!=="__new_barang__");
+  })).filter(r=>r.qty>0&&r.kode);
   if(cartRows.length===0){alertModal("Keranjang kosong","Isi minimal 1 barang dengan qty > 0.");return;}
   const seen=new Set();
   for(const r of cartRows){
-    if(seen.has(r.kode)){
-      alertModal("Barang duplikat",`<b>${esc(itemByKode(r.kode).nama)}</b> muncul lebih dari sekali.`);
+    const uniq=r.kode+"|"+(r.ukuran||"");
+    if(seen.has(uniq)){
+      const it=itemByKode(r.kode);
+      alertModal("Barang duplikat",`<b>${esc(it?it.nama:r.kode)}</b>${r.ukuran?` (${esc(r.ukuran)})`:""} muncul lebih dari sekali.`);
       return;
     }
-    seen.add(r.kode);
+    seen.add(uniq);
   }
   const tglSJ=new Date(tglVal+"T00:00:00");
 
-  // Simpan baris SJ ke DB
+  // Simpan baris SJ ke DB (ukuran = snapshot)
   const beliRows=cartRows.map(r=>({
-    sj,vendor,tglSJ,kode:r.kode,qty:r.qty,
+    sj,vendor,tglSJ,kode:r.kode,ukuran:r.ukuran,qty:r.qty,
     hargaPcs:null,invoice:null,tglInvoiceDatang:null,
     tglFinance:null,lunas:false,tglLunas:null,buktiLunas:null
   }));
@@ -3655,7 +3723,7 @@ document.getElementById("form-fase1").addEventListener("submit",async e=>{
     const newRefKey=sjKey(vendor,sj);
     for(const r of cartRows){
       const resTrx=await dbInsertTransaksi({
-        tanggal:tglSJ,jam:jamVal,kode:r.kode,jenis:"Masuk",jumlah:r.qty,
+        tanggal:tglSJ,jam:jamVal,kode:r.kode,ukuran:r.ukuran,jenis:"Masuk",jumlah:r.qty,
         pic:"Admin Pembelian",ket:"SJ "+sj,refKey:newRefKey,bagian:""
       });
       if(resTrx.error){alertModal("Gagal auto-stock",esc(resTrx.error.message));break;}
@@ -3904,7 +3972,7 @@ applyTheme(getTheme());
 applySidebarPrefs();
 if(window.lucide&&lucide.createIcons)lucide.createIcons();
 renderCartRows();
-renderVendorItemsCheckboxes([]);
+renderVendorItemsEditor([]);
 (async function checkExistingSession(){
   try{
     if(!isSupabaseConfigured())return;
