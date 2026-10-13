@@ -1793,7 +1793,8 @@ function loadVendorToForm(kode){
   state.editingVendorKode=kode;
   document.getElementById("btn-vendor-save").textContent="Update Vendor";
   const vHint=document.getElementById("vendor-mode-hint");
-vHint.textContent=`<i data-lucide="pencil"></i> Edit Vendor: ${kode}`;
+vHint.innerHTML=`<i data-lucide="pencil"></i> Edit Vendor: ${kode}`;
+refreshIcons();
 vHint.className="mode-badge edit";
   const formEl=document.getElementById("form-vendor");
   const sectionEl=formEl?formEl.closest(".section"):null;
@@ -1870,7 +1871,8 @@ function loadPicToForm(nama){
   state.editingPicNama=nama;
   document.getElementById("btn-pic-save").textContent="Update PIC";
   const pHint=document.getElementById("pic-mode-hint");
-pHint.textContent=`<i data-lucide="pencil"></i> Edit PIC: ${nama}`;
+pHint.innerHTML=`<i data-lucide="pencil"></i> Edit PIC: ${nama}`;
+refreshIcons();
 pHint.className="mode-badge edit";
   const formEl=document.getElementById("form-pic");
   const sectionEl=formEl?formEl.closest(".section"):null;
