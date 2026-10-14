@@ -3326,6 +3326,41 @@ document.getElementById("trend-toggle").addEventListener("click",e=>{
 });
 document.getElementById("btn-lihat-semua").addEventListener("click",openSemuaModal);
 
+// ==================== TES NOTIFIKASI TELEGRAM ====================
+document.getElementById("btn-test-notif").addEventListener("click",async ()=>{
+  if(!isAdmin()){ alertModal("Akses ditolak","Hanya Admin yang bisa mengirim notifikasi."); return; }
+  const btn=document.getElementById("btn-test-notif");
+  const sb=supabaseClient();
+  if(!sb){ alertModal("Supabase belum dikonfigurasi",""); return; }
+  const sess=await sb.auth.getSession();
+  const token=sess && sess.data && sess.data.session ? sess.data.session.access_token : null;
+  if(!token){ alertModal("Sesi tidak ditemukan","Login ulang."); return; }
+  const c=window.SUPABASE_CONFIG||{};
+  btn.disabled=true;
+  const oldTxt=btn.innerHTML;
+  btn.textContent="Mengirim...";
+  try{
+    const res=await fetch(c.SUPABASE_URL+"/functions/v1/stok-notif",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+token, "apikey":c.SUPABASE_ANON_KEY },
+      body:"{}"
+    });
+    const d=await res.json();
+    if(!res.ok){ toast("Gagal kirim notif","error",(d&&d.error)||("HTTP "+res.status)); }
+    else{
+      const ok=(d.terkirim||[]).filter(x=>x.ok).length;
+      const gagal=(d.terkirim||[]).filter(x=>!x.ok);
+      if(gagal.length===0){ toast("Notifikasi terkirim","success",ok+" chat · "+d.kritis+" barang kritis"); }
+      else{ toast("Sebagian gagal","error",gagal.map(x=>x.chat_id+": "+x.desc).join(" | ")); }
+    }
+  }catch(e){
+    toast("Gagal kirim notif","error",String(e&&e.message?e.message:e));
+  }
+  btn.disabled=false;
+  btn.innerHTML=oldTxt;
+  refreshIcons();
+});
+
 document.getElementById("f-riwayat-jenis").addEventListener("change",e=>{
   state.filterJenis=e.target.value;state.riwayatPage=1;renderRiwayat();
 });
