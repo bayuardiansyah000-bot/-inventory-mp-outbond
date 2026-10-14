@@ -2577,6 +2577,7 @@ async function enterDashboard(session){
   document.getElementById("session-user").textContent=session.nama;
   document.getElementById("session-bar").hidden=false;
   document.getElementById("dd-manage-users").hidden=session.role!=="Admin";
+  document.getElementById("btn-test-notif").hidden=session.role!=="Admin";
   applyTheme(getTheme());
   applySidebarPrefs();
   tickClock();
