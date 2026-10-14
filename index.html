@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.451.0/dist/umd/lucide.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='M3 9h18'/%3E%3Cpath d='M9 21V9'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="css/style.css?v=32" />
+<link rel="stylesheet" href="css/style.css?v=33" />
 </head>
 
 
@@ -448,7 +448,7 @@ Selamat datang di <b>Inventory MP Outbond</b>. Halaman ini menjelaskan <b>semua 
 </div>
 <div style="background:var(--surface-raised);border:1px solid var(--line);border-radius:12px;padding:14px;">
 <div style="font-size:12px;font-weight:700;color:var(--steel-bright);margin-bottom:4px;"><i data-lucide="save"></i> Data Tersimpan</div>
-<div style="font-size:12px;color:var(--ink-muted);line-height:1.6;">User, preferensi tema, sidebar, dan audit log disimpan di browser. <b>Data transaksi masih di memori</b> — hilang kalau halaman di-refresh.</div>
+<div style="font-size:12px;color:var(--ink-muted);line-height:1.6;">Semua data (barang, vendor, transaksi, SJ, tagihan, audit log) <b>tersimpan permanen di database</b> — aman walau halaman di-refresh atau dibuka dari perangkat lain.</div>
 </div>
 </div>
 </div>
@@ -838,12 +838,12 @@ Artinya bulan lalu barang ini belum ada transaksi sama sekali (0). Bulan ini bar
 
 <div style="padding:12px 0;border-bottom:1px solid var(--line);">
 <b style="color:var(--ink);"><i data-lucide="circle-help"></i> Bagaimana cara mengembalikan data yang terhapus?</b><br>
-Sayangnya <b>belum ada tombol Undo</b>. Data transaksi disimpan di memori — kalau halaman di-refresh, semua data kembali ke contoh awal. Fitur persistensi akan ditambahkan di versi selanjutnya.
+Sayangnya <b>belum ada tombol Undo</b>. Data tersimpan permanen di database, jadi yang terhapus tidak bisa dikembalikan lewat aplikasi. Hati-hati saat menghapus — pastikan data memang sudah tidak diperlukan.
 </div>
 
 <div style="padding:12px 0;border-bottom:1px solid var(--line);">
 <b style="color:var(--ink);"><i data-lucide="circle-help"></i> Bisa pindah komputer?</b><br>
-Bisa. Tapi karena data disimpan di browser (localStorage), user & audit log tidak akan ikut. Disarankan pakai fitur <b>Export CSV</b> untuk backup laporan.
+Bisa. Data tersimpan di server (database), jadi bisa dibuka dari komputer/HP mana saja — cukup login. Disarankan tetap pakai fitur <b>Export CSV</b> untuk backup laporan berkala.
 </div>
 
 <div style="padding:12px 0;">
@@ -967,8 +967,8 @@ Hubungi <b>Admin sistem</b>. Sertakan screenshot layar + pesan error di Console 
 </div>
 
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
-<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">localStorage</div>
-<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Penyimpanan di browser. Data di sini akan <b>hilang</b> kalau browser di-clear cache. Data user & preferensi tema disimpan di sini.</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">Database</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Data aplikasi tersimpan di server (Supabase). Aman, bisa diakses dari perangkat mana saja, dan tidak hilang walau browser di-clear cache. Hanya preferensi tampilan (tema, sidebar) yang disimpan di browser.</div>
 </div>
 
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
@@ -1024,14 +1024,8 @@ Hubungi <b>Admin sistem</b>. Sertakan screenshot layar + pesan error di Console 
 
 </div>
 </div>
-<div class="section" style="background:var(--steel-dim);border-color:var(--warn-border);">
-<div style="font-size:12.5px;color:var(--steel-bright);line-height:1.7;text-align:center;">
-<i data-lucide="pin"></i> <b>Catatan:</b> Halaman ini masih versi demo dengan data contoh. Semua fitur berfungsi normal di memori, namun belum terhubung ke database asli. Fitur simpan permanen akan ditambahkan di versi berikutnya.
-</div>
-</div>
-
 </section>
-<footer class="note">Data contoh untuk preview alur kerja — form &amp; tabel di atas fungsional terhadap data contoh ini, belum terhubung ke database asli.</footer>
+<footer class="note">Inventory MP Outbond — data tersimpan otomatis di database.</footer>
 </main>
 </div>
 </div>
@@ -1129,16 +1123,16 @@ Hubungi <b>Admin sistem</b>. Sertakan screenshot layar + pesan error di Console 
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- Konfigurasi Supabase -->
-<script src="js/config.js?v=32"></script>
+<script src="js/config.js?v=33"></script>
 <!-- Koneksi Supabase -->
-<script src="js/supabase.js?v=32"></script>
+<script src="js/supabase.js?v=33"></script>
 <!-- Autentikasi -->
-<script src="js/auth.js?v=32"></script>
+<script src="js/auth.js?v=33"></script>
 <!-- Layer data (DB) -->
-<script src="js/data.js?v=32"></script>
+<script src="js/data.js?v=33"></script>
 <!-- Realtime -->
-<script src="js/realtime.js?v=32"></script>
+<script src="js/realtime.js?v=33"></script>
 <!-- Aplikasi -->
-<script src="js/app.js?v=32"></script>
+<script src="js/app.js?v=33"></script>
 </body>
 </html>
