@@ -8,6 +8,7 @@
 truncate table public.files        restart identity cascade;
 truncate table public.transaksi    restart identity cascade;
 truncate table public.pembelian    restart identity cascade;
+truncate table public.vendor_items restart identity cascade;
 truncate table public.items        restart identity cascade;
 truncate table public.vendors      restart identity cascade;
 truncate table public.pic          restart identity cascade;
@@ -17,6 +18,7 @@ truncate table public.audit_log    restart identity cascade;
 -- Verifikasi (opsional): jalankan untuk memastikan kosong
 -- select 'items' t, count(*) from public.items
 -- union all select 'vendors', count(*) from public.vendors
+-- union all select 'vendor_items', count(*) from public.vendor_items
 -- union all select 'pic', count(*) from public.pic
 -- union all select 'bagian', count(*) from public.bagian
 -- union all select 'transaksi', count(*) from public.transaksi
