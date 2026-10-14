@@ -1548,7 +1548,9 @@ function itemsCellHtml(g,open){
 function sjLinkHtml(g){
   const n=(g.fotoSJFiles||[]).length;
   const badge=n>0?` <span class="file-count" title="${n} file terlampir"><i data-lucide="paperclip"></i>${n}</span>`:"";
-  return `<span class="link-click" data-preview-sj="${esc(g.key)}">${esc(g.sj)}</span>${badge}<div class="sub">${esc(fmtTgl(g.tglSJ))}</div>`;
+  const jam=(g.items&&g.items[0]&&g.items[0].jam)?g.items[0].jam:"";
+  const tglTxt=esc(fmtTgl(g.tglSJ))+(jam?` <span class="mono" style="font-size:11px;">${esc(jam)}</span>`:"");
+  return `<span class="link-click" data-preview-sj="${esc(g.key)}">${esc(g.sj)}</span>${badge}<div class="sub">${tglTxt}</div>`;
 }
 function invoiceCellHtml(g){
   if(!g.invoice)return `—<div class="sub">—</div>`;
@@ -2941,7 +2943,7 @@ function openInvoiceModal(key){
       for(const it of g.items){
         const ukey=it.kode+"|"+(it.ukuran||"");
         const payload={
-          sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
+          sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, jam:it.jam, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
           hargaPcs:(hargaMap[ukey]!=null)?hargaMap[ukey]:it.hargaPcs,
           invoice:noInv,
           tglInvoiceDatang:tglInv,
@@ -2981,7 +2983,7 @@ function openFinanceModal(key){
     const tgl=new Date(tglVal+"T00:00:00");
     for(const it of g.items){
       const payload={
-        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
+        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, jam:it.jam, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
         hargaPcs:it.hargaPcs, invoice:it.invoice, tglInvoiceDatang:it.tglInvoiceDatang,
         tglFinance:tgl, lunas:it.lunas, tglLunas:it.tglLunas, buktiLunas:it.buktiLunas
       };
@@ -3029,7 +3031,7 @@ function openLunasModal(key){
     }
     for(const it of g.items){
       const payload={
-        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
+        sj:g.sj, vendor:g.vendor, tglSJ:it.tglSJ, jam:it.jam, kode:it.kode, ukuran:it.ukuran, qty:it.qty,
         hargaPcs:it.hargaPcs, invoice:it.invoice, tglInvoiceDatang:it.tglInvoiceDatang,
         tglFinance:it.tglFinance, lunas:true, tglLunas:tgl, buktiLunas:bukti
       };
@@ -3056,7 +3058,7 @@ function openEditPembelianModal(key){
     return `<div class="item-row"><div class="item-name">${esc(item.nama)}${it.ukuran?` <span class="sub">(${esc(it.ukuran)})</span>`:""}</div><span class="sub">Qty (${esc(item.satuan)})</span><input type="number" class="m-qty" data-ukey="${esc(ukey)}" value="${it.qty}" min="1" step="1" /><span class="sub">Harga/${esc(item.satuan)}</span><input type="number" class="m-harga2" data-ukey="${esc(ukey)}" value="${it.hargaPcs||""}" min="0" /></div>`;
   }).join("");
   const lunasSection=g.lunas?`<div class="field" style="border-top:1px solid var(--line);padding-top:14px;"><label>Bukti Lunas</label><input type="file" id="m-edit-lunas-files" accept="image/*,application/pdf" multiple /><div class="helper">Tambah file baru. File lama tetap ada.</div><div class="file-preview-box" id="m-edit-lunas-preview"></div></div>`:"";
-  openModal(`<div class="modal-title">Edit — ${esc(g.sj)}</div><div class="modal-sub">${esc(vendorNama(g.vendor))} · Perbaiki data jika salah input</div><div class="field"><label>Tgl Barang Datang</label><input type="date" id="m-edit-tgl" value="${fmtInputDate(g.tglSJ)}" /></div><div class="field"><label>No. Surat Jalan</label><input type="text" id="m-edit-sj" value="${esc(g.sj)}" /></div><div class="field"><label>Vendor</label><select id="m-edit-vendor">${Object.values(DATA.vendors).map(v=>`<option value="${esc(v.kode)}" ${v.kode===g.vendor?"selected":""}>${esc(v.nama)}</option>`).join("")}</select></div><div class="field"><label>Foto SJ (tambah file baru)</label><input type="file" id="m-edit-sj-files" accept="image/*,application/pdf" multiple /><div class="file-preview-box" id="m-edit-sj-preview"></div></div><div class="field"><label>No. Invoice</label><input type="text" id="m-edit-inv" value="${esc(g.invoice||"")}" placeholder="INV-xxxx" /></div><div class="field"><label>Foto Invoice (tambah file baru)</label><input type="file" id="m-edit-inv-files" accept="image/*,application/pdf" multiple /><div class="file-preview-box" id="m-edit-inv-preview"></div></div><div class="field"><label>Tgl Invoice Datang</label><input type="date" id="m-edit-inv-tgl" value="${g.tglInvoiceDatang?fmtInputDate(g.tglInvoiceDatang):""}" /></div><div class="field"><label>Tgl Diserahkan ke Finance</label><input type="date" id="m-edit-fin-tgl" value="${g.tglFinance?fmtInputDate(g.tglFinance):""}" /></div><div class="field"><label>Barang</label>${rowsHtml}</div>${lunasSection}<div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan Perubahan</button></div>`);
+  openModal(`<div class="modal-title">Edit — ${esc(g.sj)}</div><div class="modal-sub">${esc(vendorNama(g.vendor))} · Perbaiki data jika salah input</div><div class="field"><label>Tgl Barang Datang</label><input type="date" id="m-edit-tgl" value="${fmtInputDate(g.tglSJ)}" /></div><div class="field"><label>Jam</label><input type="time" id="m-edit-jam" value="${esc((g.items&&g.items[0]&&g.items[0].jam)||"")}" /></div><div class="field"><label>No. Surat Jalan</label><input type="text" id="m-edit-sj" value="${esc(g.sj)}" /></div><div class="field"><label>Vendor</label><select id="m-edit-vendor">${Object.values(DATA.vendors).map(v=>`<option value="${esc(v.kode)}" ${v.kode===g.vendor?"selected":""}>${esc(v.nama)}</option>`).join("")}</select></div><div class="field"><label>Foto SJ (tambah file baru)</label><input type="file" id="m-edit-sj-files" accept="image/*,application/pdf" multiple /><div class="file-preview-box" id="m-edit-sj-preview"></div></div><div class="field"><label>No. Invoice</label><input type="text" id="m-edit-inv" value="${esc(g.invoice||"")}" placeholder="INV-xxxx" /></div><div class="field"><label>Foto Invoice (tambah file baru)</label><input type="file" id="m-edit-inv-files" accept="image/*,application/pdf" multiple /><div class="file-preview-box" id="m-edit-inv-preview"></div></div><div class="field"><label>Tgl Invoice Datang</label><input type="date" id="m-edit-inv-tgl" value="${g.tglInvoiceDatang?fmtInputDate(g.tglInvoiceDatang):""}" /></div><div class="field"><label>Tgl Diserahkan ke Finance</label><input type="date" id="m-edit-fin-tgl" value="${g.tglFinance?fmtInputDate(g.tglFinance):""}" /></div><div class="field"><label>Barang</label>${rowsHtml}</div>${lunasSection}<div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan Perubahan</button></div>`);
   renderFileChips(document.getElementById("m-edit-sj-preview"),sjFiles);
   renderFileChips(document.getElementById("m-edit-inv-preview"),invFiles);
   const lunasPreviewEl=document.getElementById("m-edit-lunas-preview");
@@ -3087,6 +3089,7 @@ function openEditPembelianModal(key){
     if(!checkNotFuture(tglVal,"Tgl Barang Datang"))return;
     const sjBaru=document.getElementById("m-edit-sj").value.trim();
     if(!sjBaru){alertModal("Data belum lengkap","No. Surat Jalan wajib diisi.");return;}
+    const jamBaru=document.getElementById("m-edit-jam").value||null;
     const invTglVal=document.getElementById("m-edit-inv-tgl").value;
     const finTglVal=document.getElementById("m-edit-fin-tgl").value;
     if(invTglVal&&!checkDateOrder(invTglVal,tglVal,"Tgl Invoice","Tgl SJ"))return;
@@ -3128,7 +3131,7 @@ function openEditPembelianModal(key){
       for(const it of g.items){
         const ukey=it.kode+"|"+(it.ukuran||"");
         const payload={
-          sj:sjBaru, vendor, tglSJ:tgl, kode:it.kode, ukuran:it.ukuran,
+          sj:sjBaru, vendor, tglSJ:tgl, jam:jamBaru, kode:it.kode, ukuran:it.ukuran,
           qty:(qtyMap[ukey]||it.qty),
           hargaPcs:(hargaMap[ukey]!=null&&hargaMap[ukey]>0)?hargaMap[ukey]:null,
           invoice:inv||null,
@@ -3704,7 +3707,7 @@ document.getElementById("form-fase1").addEventListener("submit",async e=>{
 
   // Simpan baris SJ ke DB (ukuran = snapshot)
   const beliRows=cartRows.map(r=>({
-    sj,vendor,tglSJ,kode:r.kode,ukuran:r.ukuran,qty:r.qty,
+    sj,vendor,tglSJ,jam:jamVal,kode:r.kode,ukuran:r.ukuran,qty:r.qty,
     hargaPcs:null,invoice:null,tglInvoiceDatang:null,
     tglFinance:null,lunas:false,tglLunas:null,buktiLunas:null
   }));
