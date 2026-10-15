@@ -7,7 +7,8 @@
 
 create or replace function cek_stok_keluar_update()
 returns trigger
-language plpgsql security definer as $$
+language plpgsql security definer
+set search_path = public as $$
 declare
   stok_kini int;
 begin

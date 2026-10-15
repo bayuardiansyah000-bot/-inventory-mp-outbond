@@ -5,10 +5,10 @@
 -- hanya Admin boleh menghapus file).
 -- =====================================================================
 
--- Buat bucket 'docs' (publik dibaca) bila belum ada
+-- Buat bucket 'docs' (PRIVAT — akses via signed URL) bila belum ada
 insert into storage.buckets (id, name, public)
-values ('docs','docs', true)
-on conflict (id) do nothing;
+values ('docs','docs', false)
+on conflict (id) do update set public = false;
 
 -- ===== POLICY STORAGE (schema storage.objects) =====
 

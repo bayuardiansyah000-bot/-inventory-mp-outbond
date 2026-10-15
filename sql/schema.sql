@@ -49,10 +49,21 @@ create table if not exists bagian (
   nama text unique not null
 );
 
+create table if not exists vendor_items (
+  id bigserial primary key,
+  vendor text not null references vendors(kode) on delete cascade,
+  kode_barang text not null references items(kode) on delete cascade,
+  ukuran text not null default '',
+  created_at timestamptz default now(),
+  unique (vendor, kode_barang, ukuran)
+);
+
 create table if not exists transaksi (
   id bigserial primary key,
   tanggal date not null,
+  jam time,
   kode_barang text not null references items(kode),
+  ukuran text,
   jenis text not null check (jenis in ('Masuk','Keluar')),
   jumlah int not null check (jumlah > 0),
   pic text,
@@ -68,7 +79,9 @@ create table if not exists pembelian (
   sj text not null,
   vendor text not null references vendors(kode),
   tgl_sj date not null,
+  jam time,
   kode_barang text not null references items(kode),
+  ukuran text,
   qty int not null check (qty > 0),
   harga_pcs bigint,
   invoice text,
@@ -114,7 +127,8 @@ group by i.kode, i.nama, i.satuan, i.minimum, i.stok_awal;
 
 create or replace function is_admin()
 returns boolean
-language sql stable security definer as $$
+language sql stable security definer
+set search_path = public as $$
   select exists(
     select 1 from profiles p
     where p.id = auth.uid() and p.role = 'Admin' and p.aktif = true
@@ -125,7 +139,8 @@ $$;
 
 create or replace function cek_stok_keluar()
 returns trigger
-language plpgsql security definer as $$
+language plpgsql security definer
+set search_path = public as $$
 declare
   stok_kini int;
 begin
@@ -157,6 +172,7 @@ create trigger trg_cek_stok_keluar
 alter table profiles   enable row level security;
 alter table items      enable row level security;
 alter table vendors    enable row level security;
+alter table vendor_items enable row level security;
 alter table pic        enable row level security;
 alter table bagian     enable row level security;
 alter table transaksi  enable row level security;
@@ -183,6 +199,12 @@ drop policy if exists p_vendors_read on vendors;
 create policy p_vendors_read on vendors for select using (auth.uid() is not null);
 drop policy if exists p_vendors_write on vendors;
 create policy p_vendors_write on vendors for all using (is_admin()) with check (is_admin());
+
+-- vendor_items: semua user baca; Admin tulis
+drop policy if exists p_vendor_items_read on vendor_items;
+create policy p_vendor_items_read on vendor_items for select using (auth.uid() is not null);
+drop policy if exists p_vendor_items_write on vendor_items;
+create policy p_vendor_items_write on vendor_items for all using (is_admin()) with check (is_admin());
 
 drop policy if exists p_pic_read on pic;
 create policy p_pic_read on pic for select using (auth.uid() is not null);

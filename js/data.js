@@ -296,17 +296,36 @@ async function dbDeletePembelianBySJ(vendor, sj){
 }
 
 // ---------- STORAGE / FILES ----------
-// File disimpan di bucket 'docs' dengan struktur: <tipe>/<vendor>/<sj>/<namafile>
-// Tabel `files` mencatat path-nya. Untuk tampilan, pakai URL publik bucket.
+// File disimpan di bucket 'docs' (PRIVAT) dengan struktur: <tipe>/<vendor>/<sj>/<namafile>
+// Tabel `files` mencatat path-nya. Untuk tampilan, pakai signed URL (kadaluarsa).
 
 function _safeFileName(name){
   return String(name||"file").replace(/[^A-Za-z0-9._-]+/g,"_");
 }
 
-// Kembalikan URL publik sebuah path di bucket docs
-function storagePublicUrl(path){
-  var c = window.SUPABASE_CONFIG || {};
-  return c.SUPABASE_URL + "/storage/v1/object/public/docs/" + path;
+// Masa berlaku signed URL (detik). 12 jam — lebih lama dari sesi login (8 jam).
+var SIGNED_URL_TTL = 43200;
+
+// Kembalikan signed URL untuk satu path di bucket docs.
+async function storageSignedUrl(path){
+  var sb = supabaseClient();
+  if(!sb || !path) return null;
+  var res = await sb.storage.from("docs").createSignedUrl(path, SIGNED_URL_TTL);
+  if(res.error){ console.error("storageSignedUrl:", res.error); return null; }
+  return res.data ? res.data.signedUrl : null;
+}
+
+// Kembalikan map path -> signed URL untuk banyak path (1 panggilan API).
+async function storageSignedUrls(paths){
+  var sb = supabaseClient();
+  if(!sb || !paths || paths.length===0) return {};
+  var res = await sb.storage.from("docs").createSignedUrls(paths, SIGNED_URL_TTL);
+  if(res.error){ console.error("storageSignedUrls:", res.error); return {}; }
+  var map = {};
+  (res.data||[]).forEach(function(d){
+    if(!d.error && d.signedUrl) map[d.path] = d.signedUrl;
+  });
+  return map;
 }
 
 // Upload satu file {name,type,dataUrl} ke Storage, catat ke tabel files.
@@ -331,7 +350,8 @@ async function dbUploadFile(pembelianRef, tipe, vendor, sj, file){
     path:path
   });
   if(ins.error) return { error:ins.error };
-  return { data:{ path:path, url:storagePublicUrl(path), name:file.name, type:file.type } };
+  var url = await storageSignedUrl(path);
+  return { data:{ path:path, url:url, name:file.name, type:file.type } };
 }
 
 // Ambil daftar file untuk sekumpulan SJ (by tipe). Return map: refKey -> [ {path,name,type,url} ]
@@ -340,13 +360,15 @@ async function dbLoadFilesByRefs(refList, tipe){
   if(!sb || !refList || refList.length===0) return {};
   var res = await sb.from("files").select("*").eq("tipe",tipe).in("pembelian_ref",refList);
   if(res.error){ console.error("dbLoadFilesByRefs:", res.error); return {}; }
+  var rows = res.data||[];
+  var urls = await storageSignedUrls(rows.map(function(r){ return r.path; }));
   var map = {};
-  (res.data||[]).forEach(function(r){
+  rows.forEach(function(r){
     var name = r.path.split("/").pop().replace(/^\d+_/, "");
     var ext = (name.split(".").pop()||"").toLowerCase();
     var type = (ext==="pdf")?"application/pdf":("image/"+ (ext==="jpg"?"jpeg":ext||"jpeg"));
     (map[r.pembelian_ref] = map[r.pembelian_ref] || []).push({
-      path:r.path, name:name, type:type, url:storagePublicUrl(r.path)
+      path:r.path, name:name, type:type, url:urls[r.path]||null
     });
   });
   return map;

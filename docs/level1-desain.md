@@ -190,19 +190,22 @@ inventory-project/
 │  ├─ config.js      (SUPABASE_URL + anon key)
 │  ├─ supabase.js    (inisialisasi client)
 │  ├─ auth.js        (login username, logout, role guard)
-│  ├─ data.js        (pengganti DATA object → query DB)
-│  ├─ storage.js     (upload/preview file)
+│  ├─ data.js        (layer data: query DB + Storage)
 │  ├─ realtime.js    (subscribe perubahan)
-│  └─ ui.js          (fungsi render — hampir tak berubah)
-├─ sql/schema.sql    (skema + RLS + trigger)
+│  └─ app.js         (logika aplikasi & render UI)
+├─ sql/              (schema.sql + patch-02 s/d patch-07)
+├─ supabase/functions/ (Edge Functions: manage-user, stok-notif, telegram-bot)
 └─ README.md
 ```
+
+Catatan: rencana awal memisahkan `storage.js`/`ui.js`; implementasi akhir
+menggabungkannya ke `data.js` (layer data + Storage) dan `app.js` (logika + render).
 
 `anon key` aman dipublikasikan (dirancang untuk browser); yang wajib benar adalah **RLS**.
 
 ---
 
-## 8. Urutan Pengerjaan (Level 2)
+## 8. Urutan Pengerjaan (Level 2) — SELESAI
 
 | Tahap | Isi | Hasil |
 |-------|-----|-------|
@@ -213,6 +216,11 @@ inventory-project/
 | 5 | Pembelian + tagihan + upload file ke Storage | Alur SJ lengkap |
 | 6 | Audit log ke DB + realtime penuh | Selesai |
 | 7 | Deployment (Netlify/Vercel) | Online publik |
+
+Tambahan setelah tahap 7: notifikasi stok via Telegram (Edge Function `stok-notif`
++ cron 08:00 & 18:00 WIB), bot Telegram interaktif (`telegram-bot`), halaman
+Kelola User (`manage-user`), dukungan ukuran per vendor, dan bucket Storage
+privat (signed URL).
 
 ---
 
