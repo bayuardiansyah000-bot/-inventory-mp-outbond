@@ -544,18 +544,25 @@ async function syncSJToTransaksi(sj,vendor){
   // Apakah SJ ini sebelumnya punya transaksi auto-stock?
   const has=DATA.transaksi.some(t=>t.refKey===key);
   if(!has)return { ok:true }; // SJ tanpa auto-stock tidak ditambah otomatis saat edit
-  // Simpan jam transaksi lama (per kode+ukuran) agar tidak hilang saat rebuild
+  // Simpan jam & PIC transaksi lama (per kode+ukuran) agar tidak hilang saat rebuild
   const jamLama={};
-  DATA.transaksi.forEach(t=>{ if(t.refKey===key && t.jam) jamLama[t.kode+"|"+(t.ukuran||"")]=t.jam; });
+  const picLama={};
+  DATA.transaksi.forEach(t=>{
+    if(t.refKey!==key) return;
+    const ukey=t.kode+"|"+(t.ukuran||"");
+    if(t.jam) jamLama[ukey]=t.jam;
+    if(t.pic) picLama[ukey]=t.pic;
+  });
   // Hapus semua transaksi auto-stock milik SJ ini di DB
   const del=await dbDeleteTransaksiByRefKey(key);
   if(del.error) return { ok:false, error:del.error.message };
   // Bangun ulang dari baris pembelian milik SJ ini (ukuran ikut dari baris pembelian)
   const rows=DATA.pembelian.filter(r=>sjKey(r.vendor,r.sj)===key);
   for(const r of rows){
+    const ukey=r.kode+"|"+(r.ukuran||"");
     const ins=await dbInsertTransaksi({
-      tanggal:r.tglSJ,jam:jamLama[r.kode+"|"+(r.ukuran||"")]||nowHHMM(),kode:r.kode,ukuran:r.ukuran,jenis:"Masuk",jumlah:r.qty,
-      pic:"Admin Pembelian",ket:"SJ "+r.sj,refKey:key,bagian:""
+      tanggal:r.tglSJ,jam:jamLama[ukey]||nowHHMM(),kode:r.kode,ukuran:r.ukuran,jenis:"Masuk",jumlah:r.qty,
+      pic:picLama[ukey]||(CURRENT_SESSION?CURRENT_SESSION.nama:"Admin"),ket:"SJ "+r.sj,refKey:key,bagian:""
     });
     if(ins.error) return { ok:false, error:ins.error.message };
   }
@@ -3762,10 +3769,11 @@ document.getElementById("form-fase1").addEventListener("submit",async e=>{
   // Auto-stock: buat transaksi IN untuk tiap barang (validasi stok tak perlu untuk IN)
   if(document.getElementById("p-autostock").checked){
     const newRefKey=sjKey(vendor,sj);
+    const picUser = CURRENT_SESSION ? CURRENT_SESSION.nama : "Admin";
     for(const r of cartRows){
       const resTrx=await dbInsertTransaksi({
         tanggal:tglSJ,jam:jamVal,kode:r.kode,ukuran:r.ukuran,jenis:"Masuk",jumlah:r.qty,
-        pic:"Admin Pembelian",ket:"SJ "+sj,refKey:newRefKey,bagian:""
+        pic:picUser,ket:"SJ "+sj,refKey:newRefKey,bagian:""
       });
       if(resTrx.error){alertModal("Gagal auto-stock",esc(resTrx.error.message));break;}
     }
