@@ -29,6 +29,7 @@ function startRealtime(){
       .on("postgres_changes",{event:"*",schema:"public",table:"transaksi"},_realtimeScheduleReload)
       .on("postgres_changes",{event:"*",schema:"public",table:"pembelian"},_realtimeScheduleReload)
       .on("postgres_changes",{event:"*",schema:"public",table:"items"},_realtimeScheduleReload)
+      .on("postgres_changes",{event:"*",schema:"public",table:"pic"},_realtimeScheduleReload)
       .on("postgres_changes",{event:"*",schema:"public",table:"files"},_realtimeScheduleReload)
       .subscribe();
     _realtimeActive = true;

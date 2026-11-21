@@ -9,6 +9,7 @@
 alter publication supabase_realtime add table transaksi;
 alter publication supabase_realtime add table pembelian;
 alter publication supabase_realtime add table items;
+alter publication supabase_realtime add table pic;
 alter publication supabase_realtime add table files;
 
 -- Catatan:

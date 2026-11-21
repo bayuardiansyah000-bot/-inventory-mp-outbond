@@ -53,6 +53,8 @@ create table vendors (
 );
 
 -- pic
+-- Catatan: kolom `posisi` sudah tidak dipakai di UI (pengambil barang hanya
+-- butuh nama + divisi). Kolom dibiarkan agar data lama tidak hilang.
 create table pic (
   id bigserial primary key,
   nama text unique not null,
@@ -73,7 +75,7 @@ create table transaksi (
   kode_barang text not null references items(kode),
   jenis text not null check (jenis in ('Masuk','Keluar')),
   jumlah int not null check (jumlah > 0),
-  pic text,
+  pic text,                        -- OUT: nama pengambil barang; IN: nama penerima (akun login)
   ket text,
   bagian text,
   ref_key text,                    -- pengikat auto-stock SJ (contoh: NMS::sj|105)
@@ -147,7 +149,7 @@ group by i.kode, i.nama, i.satuan, i.minimum, i.stok_awal;
 | profiles | sendiri; Admin semua | Admin | Admin |
 | items | semua | Admin | Admin |
 | vendors | semua | Admin | Admin |
-| pic | semua | Admin | Admin |
+| pic | semua | Admin + Operator (tambah) | Admin |
 | bagian | semua | Admin | Admin |
 | transaksi | semua | Admin+Operator | Admin |
 | pembelian | semua | Admin+Operator | Admin |
@@ -211,7 +213,7 @@ menggabungkannya ke `data.js` (layer data + Storage) dan `app.js` (logika + rend
 |-------|-----|-------|
 | 1 | Setup project Supabase + skema + RLS + seed Admin | DB siap |
 | 2 | Auth: login/logout/role (username) | Login online |
-| 3 | Data master: items, vendors, PIC, bagian | CRUD ke DB |
+| 3 | Data master: items, vendors, pengambil barang, bagian | CRUD ke DB |
 | 4 | Transaksi + validasi stok server + realtime | Input online |
 | 5 | Pembelian + tagihan + upload file ke Storage | Alur SJ lengkap |
 | 6 | Audit log ke DB + realtime penuh | Selesai |

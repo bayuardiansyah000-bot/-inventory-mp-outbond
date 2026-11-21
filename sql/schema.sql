@@ -66,7 +66,7 @@ create table if not exists transaksi (
   ukuran text,
   jenis text not null check (jenis in ('Masuk','Keluar')),
   jumlah int not null check (jumlah > 0),
-  pic text,
+  pic text,                        -- OUT: pengambil barang; IN: penerima (nama akun login)
   ket text,
   bagian text,
   ref_key text,
@@ -210,6 +210,9 @@ drop policy if exists p_pic_read on pic;
 create policy p_pic_read on pic for select using (auth.uid() is not null);
 drop policy if exists p_pic_write on pic;
 create policy p_pic_write on pic for all using (is_admin()) with check (is_admin());
+-- Operator boleh MENAMBAH pengambil barang; edit/hapus tetap Admin.
+drop policy if exists p_pic_insert on pic;
+create policy p_pic_insert on pic for insert with check (auth.uid() is not null);
 
 drop policy if exists p_bagian_read on bagian;
 create policy p_bagian_read on bagian for select using (auth.uid() is not null);
@@ -250,6 +253,61 @@ drop policy if exists p_audit_read on audit_log;
 create policy p_audit_read on audit_log for select using (is_admin());
 drop policy if exists p_audit_insert on audit_log;
 create policy p_audit_insert on audit_log for insert with check (auth.uid() is not null);
+
+-- ---------- FUNGSI: rename nama pengambil di transaksi lama ----------
+-- Rename hanya mengubah kolom `pic`, bukan qty, jadi validasi stok di
+-- trigger update (patch-02) dilewati sekali ini lewat flag app.skip_stok_check.
+
+create or replace function rename_pic_transaksi(old_nama text, new_nama text)
+returns int
+language plpgsql security definer
+set search_path = public as $$
+declare
+  jumlah int;
+begin
+  if not is_admin() then
+    raise exception 'Hanya Admin yang boleh mengubah riwayat pengambil';
+  end if;
+  if old_nama is null or new_nama is null or btrim(new_nama) = '' then
+    raise exception 'Nama pengambil tidak valid';
+  end if;
+
+  perform set_config('app.skip_stok_check', 'on', true);
+
+  update transaksi
+     set pic = btrim(new_nama)
+   where pic = old_nama
+     and jenis = 'Keluar';
+
+  get diagnostics jumlah = row_count;
+
+  perform set_config('app.skip_stok_check', 'off', true);
+
+  return jumlah;
+end;
+$$;
+
+revoke all on function rename_pic_transaksi(text, text) from public;
+grant execute on function rename_pic_transaksi(text, text) to authenticated;
+
+-- ---------- FUNGSI: cegah hapus pengambil yang sudah dipakai ----------
+
+create or replace function cek_hapus_pic()
+returns trigger
+language plpgsql security definer
+set search_path = public as $$
+begin
+  if exists (select 1 from transaksi where jenis = 'Keluar' and pic = old.nama) then
+    raise exception 'Pengambil % sudah dipakai di transaksi OUT. Nonaktifkan saja, jangan hapus.', old.nama;
+  end if;
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_cek_hapus_pic on pic;
+create trigger trg_cek_hapus_pic
+  before delete on pic
+  for each row execute function cek_hapus_pic();
 
 -- =====================================================================
 -- CATATAN SEED ADMIN PERTAMA (jalankan manual setelah Admin dibuat di Auth):

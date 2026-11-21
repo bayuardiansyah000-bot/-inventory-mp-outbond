@@ -442,7 +442,18 @@ function picNamaList(){ return DATA.picList.filter(p=>p.aktif!==false).map(p=>p.
 function picInfoStr(n){
   const p=picByNama(n);
   if(!p)return"";
-  return [p.divisi,p.posisi].filter(Boolean).join(" · ");
+  return p.divisi||"";
+}
+// Nama pengambil (OUT) + nama penerima (IN) yang pernah tercatat di transaksi.
+function picFilterNames(){
+  const set=new Set();
+  DATA.picList.forEach(p=>{ if(p.nama)set.add(p.nama); });
+  DATA.transaksi.forEach(t=>{ if(t.pic)set.add(t.pic); });
+  return [...set].sort((a,b)=>a.localeCompare(b,"id"));
+}
+function picExists(nama){
+  const q=String(nama||"").trim().toLowerCase();
+  return DATA.picList.some(p=>p.nama.trim().toLowerCase()===q);
 }
 function fmtTgl(dt){
   return dt?dt.toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):"-";
@@ -544,7 +555,7 @@ async function syncSJToTransaksi(sj,vendor){
   // Apakah SJ ini sebelumnya punya transaksi auto-stock?
   const has=DATA.transaksi.some(t=>t.refKey===key);
   if(!has)return { ok:true }; // SJ tanpa auto-stock tidak ditambah otomatis saat edit
-  // Simpan jam & PIC transaksi lama (per kode+ukuran) agar tidak hilang saat rebuild
+  // Simpan jam & penerima transaksi lama (per kode+ukuran) agar tidak hilang saat rebuild
   const jamLama={};
   const picLama={};
   DATA.transaksi.forEach(t=>{
@@ -795,7 +806,7 @@ function runSearch(q){
       title:"<i data-lucide='building-2'></i> Vendor ("+vendors.length+")",
       items:vendors.slice(0,8).map(v=>({
         title:`${esc(v.kode)} — ${highlight(v.nama,query)}`,
-        sub:`PIC: ${esc(v.pic||"-")} · ${esc(v.hp||"-")}`,
+        sub:`Kontak: ${esc(v.pic||"-")} · ${esc(v.hp||"-")}`,
         action:()=>{
           closeSearchModal();
           state.activeTab="vendor";
@@ -871,13 +882,13 @@ function runSearch(q){
   }
 
   // === PIC ===
-  const pics=DATA.picList.filter(p=>hit(p.nama)||hit(p.divisi)||hit(p.posisi));
+  const pics=DATA.picList.filter(p=>hit(p.nama)||hit(p.divisi));
   if(pics.length){
     groups.push({
-      title:"<i data-lucide='user'></i> PIC ("+pics.length+")",
+      title:"<i data-lucide='user'></i> Pengambil Barang ("+pics.length+")",
       items:pics.slice(0,8).map(p=>({
         title:highlight(p.nama,query),
-        sub:`${esc(p.divisi||"-")} · ${esc(p.posisi||"-")}`,
+        sub:esc(p.divisi||"-"),
         action:()=>{
           closeSearchModal();
           state.activeTab="pic";
@@ -885,9 +896,9 @@ function runSearch(q){
           render();
           setTimeout(()=>{
             const btn=document.querySelector('[data-edit-pic="'+CSS.escape(p.nama)+'"]');
-            const row=btn?btn.closest("tr"):null;
-            if(row){flashAndScroll(row);toast("PIC: "+p.nama,"info",p.divisi||"");}
-            else toast("Baris tidak ditemukan","error","Cek tab PIC");
+            const row=btn?btn.closest("tr"):findRowByCode("#pic-list tr",p.nama);
+            if(row){flashAndScroll(row);toast("Pengambil: "+p.nama,"info",p.divisi||"");}
+            else toast("Baris tidak ditemukan","error","Cek tab Pengambil Barang");
           },120);
         }
       }))
@@ -906,7 +917,7 @@ function runSearch(q){
         const it=itemByKode(t.kode)||{nama:t.kode,satuan:""};
         return {
           title:`${t.jenis==="Keluar"?"OUT":"IN"} ${t.jumlah} ${esc(it.satuan)} - ${highlight(it.nama,query)}`,
-          sub:`${esc(fmtTgl(t.tanggal))} - PIC: ${esc(t.pic)}${t.bagian?" - "+esc(t.bagian):""}`,
+          sub:`${esc(fmtTgl(t.tanggal))} - ${t.jenis==="Masuk"?"Penerima":"Pengambil"}: ${esc(t.pic)}${t.bagian?" - "+esc(t.bagian):""}`,
           action:()=>{
             closeSearchModal();
             state.activeTab="transaksi";
@@ -1063,7 +1074,7 @@ const state={
   filterJenis:"",filterBarang:"",filterPic:"",filterBagian:""
 };
 const PAGE_SIZE=20;
-const TAB_TITLES={beranda:"Beranda",transaksi:"Transaksi Gudang",pembelian:"Pembelian",vendor:"Vendor & Barang",pic:"PIC",laporan:"Laporan",petunjuk:"Petunjuk"};
+const TAB_TITLES={beranda:"Beranda",transaksi:"Transaksi Gudang",pembelian:"Pembelian",vendor:"Vendor & Barang",pic:"Pengambil Barang",laporan:"Laporan",petunjuk:"Petunjuk"};
 
 // ==================== ROLE HELPERS ====================
 function canManageUser(){return isAdmin();}
@@ -1140,13 +1151,21 @@ function populateSelects(){
   pVendor.innerHTML='<option value="">-- Pilih Vendor --</option>'+Object.values(DATA.vendors).map(v=>`<option value="${esc(v.kode)}">${esc(v.nama)}</option>`).join("");
   if(curVendor&&DATA.vendors[curVendor])pVendor.value=curVendor;
 
-  const fPic=document.getElementById("f-pic");const curPic=fPic.value;const aktivePic=picNamaList();
-  fPic.innerHTML='<option value="">-- Pilih PIC --</option>'+aktivePic.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+'<option value="__new_pic__">+ Tambah PIC baru...</option>';
-  if(curPic&&(aktivePic.includes(curPic)||curPic==="__new_pic__"))fPic.value=curPic;
+  const fPic=document.getElementById("f-pic");const curPic=fPic.value;
+  const opsiPic=DATA.picList.filter(p=>p.aktif!==false).map(p=>{
+    const label=p.divisi?`${p.nama} — ${p.divisi}`:p.nama;
+    return `<option value="${esc(p.nama)}">${esc(label)}</option>`;
+  }).join("");
+  fPic.innerHTML='<option value="">-- Pilih pengambil --</option>'+opsiPic+'<option value="__new_pic__">+ Tambah pengambil baru...</option>';
+  if(curPic&&(picNamaList().includes(curPic)||curPic==="__new_pic__"))fPic.value=curPic;
+  fPic.dataset.prevValue=fPic.value==="__new_pic__"?"":fPic.value;
 
   const fBagian=document.getElementById("f-bagian");const curBagian=fBagian.value;
   fBagian.innerHTML=DATA.bagianList.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("");
   if(curBagian&&DATA.bagianList.includes(curBagian))fBagian.value=curBagian;
+
+  const fPenerima=document.getElementById("f-penerima");
+  if(fPenerima)fPenerima.value=(CURRENT_SESSION&&CURRENT_SESSION.nama)||"";
 
   const fJenis=document.getElementById("f-riwayat-jenis");if(fJenis)fJenis.value=state.filterJenis||"";
 
@@ -1158,10 +1177,10 @@ function populateSelects(){
     fBar.innerHTML='<option value="">Semua Barang</option>'+DATA.items.map(i=>`<option value="${esc(i.kode)}">${esc(i.nama)}</option>`).join("");
     fBar.value=state.filterBarang||"";
   }
-  if(state.filterPic&&!picByNama(state.filterPic))state.filterPic="";
+  if(state.filterPic&&!picFilterNames().includes(state.filterPic))state.filterPic="";
   const fPc=document.getElementById("f-riwayat-pic");
   if(fPc){
-    fPc.innerHTML='<option value="">Semua PIC</option>'+DATA.picList.map(p=>`<option value="${esc(p.nama)}">${esc(p.nama)}</option>`).join("");
+    fPc.innerHTML='<option value="">Semua Pengambil / Penerima</option>'+picFilterNames().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
     fPc.value=state.filterPic||"";
   }
   if(state.filterBagian&&!DATA.bagianList.includes(state.filterBagian))state.filterBagian="";
@@ -1360,7 +1379,7 @@ function renderFeed(){
     const it=itemByKode(t.kode)||{nama:t.kode,satuan:""};
     const diff=Math.round((getToday()-t.tanggal)/86400000);
     const waktu=diff===0?"Hari ini":diff===1?"Kemarin":`${diff} hari lalu`;
-    return `<div class="feed-row"><div class="feed-dot ${t.jenis==="Keluar"?"out":"in"}"></div><div class="feed-body"><div class="feed-line1"><b>${t.jenis==="Keluar"?"OUT":"IN"}</b> · ${esc(it.nama)} ${t.jumlah} ${esc(it.satuan)} — <span style="color:var(--ink-muted);">${esc(t.pic)}</span></div></div><div class="feed-time">${waktu}</div></div>`;
+    return `<div class="feed-row"><div class="feed-dot ${t.jenis==="Keluar"?"out":"in"}"></div><div class="feed-body"><div class="feed-line1"><b>${t.jenis==="Keluar"?"OUT":"IN"}</b> · ${esc(it.nama)} ${t.jumlah} ${esc(it.satuan)} — <span style="color:var(--ink-muted);">${esc(t.pic)}</span>${t.jenis==="Masuk"?' <span style="color:var(--ink-faint);font-size:11px;">(penerima)</span>':""}</div></div><div class="feed-time">${waktu}</div></div>`;
   }).join("");
 }
 function renderTagihanCard(){
@@ -1497,13 +1516,13 @@ function renderRiwayat(){
     tbody.innerHTML=pageRows.map(({t,idx})=>{
       const it=itemByKode(t.kode);
       const isAutoStock=t.refSJ!=null;
-      const picSub=picInfoStr(t.pic);
+      const picSub=t.jenis==="Keluar"?picInfoStr(t.pic):"";
       const delDisabled=isAutoStock||!canDelete();
       const delTitle=isAutoStock?'Dari SJ - hapus lewat tab Pembelian':(!canDelete()?"Hanya Admin yang bisa menghapus":"");
       const jamTampil = t.jam ? t.jam : (t.createdAt?t.createdAt.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}):"");
       const jamHtml=jamTampil?`<div class="sub mono" style="font-size:10.5px;">${esc(jamTampil)}</div>`:"";
       const ukHtml=t.ukuran?`<div class="sub" style="font-size:11px;">${esc(t.ukuran)}</div>`:"";
-      return `<tr><td>${esc(fmtTgl(t.tanggal))}${jamHtml}</td><td class="mono">${esc(t.kode)}</td><td><b>${esc(it?it.nama:t.kode)}</b>${ukHtml}</td><td><span class="badge ${t.jenis==="Masuk"?"badge-good":"badge-warn"}">${t.jenis==="Masuk"?"IN":"OUT"}</span></td><td style="text-align:right">${t.jumlah} ${esc(it?it.satuan:"")}</td><td>${esc(t.pic)}${picSub?`<div class="sub">${esc(picSub)}</div>`:""}</td><td class="sub">${esc(t.ket)||"-"}${t.bagian?`<div class="sub" style="color:var(--steel-bright);"><i data-lucide="package"></i> ${esc(t.bagian)}</div>`:""}${isAutoStock?'<div class="sub" style="color:var(--steel-bright);"><i data-lucide="link"></i> auto-stock</div>':""}</td><td class="row-actions"><button class="btn btn-secondary" data-edit-transaksi="${idx}">Edit</button><button class="btn btn-secondary" data-del-transaksi="${idx}" ${delDisabled?'disabled title="'+esc(delTitle)+'"':""}>Hapus</button></td></tr>`;
+      return `<tr><td>${esc(fmtTgl(t.tanggal))}${jamHtml}</td><td class="mono">${esc(t.kode)}</td><td><b>${esc(it?it.nama:t.kode)}</b>${ukHtml}</td><td><span class="badge ${t.jenis==="Masuk"?"badge-good":"badge-warn"}">${t.jenis==="Masuk"?"IN":"OUT"}</span></td><td style="text-align:right">${t.jumlah} ${esc(it?it.satuan:"")}</td><td>${esc(t.pic)||"-"}${picSub?`<div class="sub">${esc(picSub)}</div>`:""}${t.jenis==="Masuk"?'<div class="sub" style="color:var(--steel-bright);">penerima</div>':""}</td><td class="sub">${esc(t.ket)||"-"}${t.bagian?`<div class="sub" style="color:var(--steel-bright);"><i data-lucide="package"></i> ${esc(t.bagian)}</div>`:""}${isAutoStock?'<div class="sub" style="color:var(--steel-bright);"><i data-lucide="link"></i> auto-stock</div>':""}</td><td class="row-actions"><button class="btn btn-secondary" data-edit-transaksi="${idx}">Edit</button><button class="btn btn-secondary" data-del-transaksi="${idx}" ${delDisabled?'disabled title="'+esc(delTitle)+'"':""}>Hapus</button></td></tr>`;
     }).join("");
   }
   const fromLabel=fmtTgl(state.riwayatFrom);
@@ -1835,52 +1854,61 @@ function renderPicList(){
   if(!tbody)return;
   const q=state.picSearch.trim().toLowerCase();
   const usage={};
-  DATA.transaksi.forEach(t=>{ if(t.pic)usage[t.pic]=(usage[t.pic]||0)+1; });
+  DATA.transaksi.forEach(t=>{
+    if(t.jenis==="Keluar"&&t.pic)usage[t.pic]=(usage[t.pic]||0)+1;
+  });
   const list=DATA.picList.filter(p=>{
     if(!q)return true;
-    return p.nama.toLowerCase().includes(q)||(p.divisi||"").toLowerCase().includes(q)||(p.posisi||"").toLowerCase().includes(q);
+    return p.nama.toLowerCase().includes(q)||(p.divisi||"").toLowerCase().includes(q);
   });
+  const admin=canManageMaster();
+  const aktifWrap=document.getElementById("pic-aktif-wrap");
+  if(aktifWrap)aktifWrap.hidden=!admin;
+  const formTitle=document.getElementById("pic-form-title");
+  if(formTitle)formTitle.textContent=admin?"Tambah / Edit Pengambil Barang":"Tambah Pengambil Barang";
+  if(!admin&&state.editingPicNama)resetPicForm();
   if(list.length===0){
-    tbody.innerHTML='<tr class="empty-row"><td colspan="6">Belum ada PIC.</td></tr>';
+    tbody.innerHTML='<tr class="empty-row"><td colspan="5">Belum ada pengambil barang.</td></tr>';
     return;
   }
   tbody.innerHTML=list.map(p=>{
     const trxCount=usage[p.nama]||0;
     const trxCell=trxCount>0?`<span class="badge badge-good">${trxCount} trx</span>`:`<span class="badge badge-neutral">0 trx</span>`;
     const statusCell=p.aktif!==false?`<span class="badge badge-good"><span class="badge-dot"></span>Aktif</span>`:`<span class="badge badge-neutral"><span class="badge-dot"></span>Nonaktif</span>`;
-    const toggleBtn=p.aktif!==false
+    const editBtn=admin?`<button class="btn btn-secondary btn-sm" data-edit-pic="${esc(p.nama)}">Edit</button>`:"";
+    const toggleBtn=!admin?"":(p.aktif!==false
       ?`<button class="btn btn-secondary btn-sm" data-toggle-pic="${esc(p.nama)}" data-aktif="true">Nonaktifkan</button>`
-      :`<button class="btn btn-secondary btn-sm" data-toggle-pic="${esc(p.nama)}" data-aktif="false" style="color:var(--good);">Aktifkan</button>`;
-    const hapusBtn=p.aktif!==false?"":(canManageMaster()
-      ?`<button class="btn btn-secondary btn-sm" data-del-pic="${esc(p.nama)}" style="color:var(--danger);">Hapus</button>`
-      :`<button class="btn btn-secondary btn-sm" disabled title="Hanya Admin yang bisa menghapus" style="color:var(--ink-faint);">Hapus</button>`);
-    return `<tr><td style="font-weight:600;">${esc(p.nama)}</td><td>${esc(p.divisi)||"-"}</td><td>${esc(p.posisi)||"-"}</td><td style="text-align:center">${trxCell}</td><td style="text-align:center">${statusCell}</td><td style="text-align:right"><div class="row-actions" style="justify-content:flex-end;"><button class="btn btn-secondary btn-sm" data-edit-pic="${esc(p.nama)}">Edit</button>${toggleBtn}${hapusBtn}</div></td></tr>`;
+      :`<button class="btn btn-secondary btn-sm" data-toggle-pic="${esc(p.nama)}" data-aktif="false" style="color:var(--good);">Aktifkan</button>`);
+    const hapusBtn=(!admin||p.aktif!==false||trxCount>0)?"":`<button class="btn btn-secondary btn-sm" data-del-pic="${esc(p.nama)}" style="color:var(--danger);">Hapus</button>`;
+    return `<tr><td style="font-weight:600;">${esc(p.nama)}</td><td>${esc(p.divisi)||"-"}</td><td style="text-align:center">${trxCell}</td><td style="text-align:center">${statusCell}</td><td style="text-align:right"><div class="row-actions" style="justify-content:flex-end;">${editBtn}${toggleBtn}${hapusBtn}</div></td></tr>`;
   }).join("");
 }
 function resetPicForm(){
   document.getElementById("pic-nama").value="";
   document.getElementById("pic-divisi").value="";
-  document.getElementById("pic-posisi").value="";
   document.getElementById("pic-aktif").checked=true;
   document.getElementById("pic-nama").disabled=false;
   state.editingPicNama=null;
-  document.getElementById("btn-pic-save").textContent="Simpan PIC";
+  document.getElementById("btn-pic-save").textContent="Simpan Pengambil";
   const pHint=document.getElementById("pic-mode-hint");
-pHint.innerHTML=`<i data-lucide="pencil-line"></i> Tambah PIC Baru`;
+pHint.innerHTML=`<i data-lucide="pencil-line"></i> Tambah Pengambil Baru`;
 pHint.className="mode-badge";
 }
 function loadPicToForm(nama){
+  if(!canManageMaster()){
+    alertModal("Akses ditolak","Hanya Admin yang bisa mengubah data pengambil. Kamu tetap bisa menambah pengambil baru.");
+    return;
+  }
   const p=picByNama(nama);
   if(!p)return;
   document.getElementById("pic-nama").value=p.nama;
-  document.getElementById("pic-nama").disabled=true;
+  document.getElementById("pic-nama").disabled=false;
   document.getElementById("pic-divisi").value=p.divisi||"";
-  document.getElementById("pic-posisi").value=p.posisi||"";
   document.getElementById("pic-aktif").checked=p.aktif!==false;
   state.editingPicNama=nama;
-  document.getElementById("btn-pic-save").textContent="Update PIC";
+  document.getElementById("btn-pic-save").textContent="Update Pengambil";
   const pHint=document.getElementById("pic-mode-hint");
-pHint.innerHTML=`<i data-lucide="pencil"></i> Edit PIC: ${nama}`;
+pHint.innerHTML=`<i data-lucide="pencil"></i> Edit Pengambil: ${nama}`;
 refreshIcons();
 pHint.className="mode-badge edit";
   const formEl=document.getElementById("form-pic");
@@ -1898,24 +1926,54 @@ pHint.className="mode-badge edit";
 function deletePic(nama){
   const p=picByNama(nama);
   if(!p)return;
-  if(!canManageMaster()){alertModal("Akses ditolak","Hanya Admin yang bisa menghapus PIC.");return;}
-  if(p.aktif!==false){alertModal("Tidak bisa hapus","PIC ini masih <b>aktif</b>. Nonaktifkan dulu sebelum menghapus.");return;}
-  const usedCount=DATA.transaksi.filter(t=>t.pic===nama).length;
-  const warnMsg=usedCount>0
-    ?`PIC <b>${esc(nama)}</b> dipakai di ${usedCount} transaksi lama. Hapus permanen?`
-    :`Yakin hapus PIC <b>${esc(nama)}</b> dari daftar master?`;
-  confirmModal("Hapus PIC",warnMsg,async ()=>{
+  if(!canManageMaster()){alertModal("Akses ditolak","Hanya Admin yang bisa menghapus pengambil.");return;}
+  if(p.aktif!==false){alertModal("Tidak bisa hapus","Pengambil ini masih <b>aktif</b>. Nonaktifkan dulu sebelum menghapus.");return;}
+  const usedCount=DATA.transaksi.filter(t=>t.jenis==="Keluar"&&t.pic===nama).length;
+  if(usedCount>0){
+    alertModal("Tidak bisa hapus",`Pengambil <b>${esc(nama)}</b> sudah dipakai di ${usedCount} transaksi OUT. Riwayat harus tetap utuh, jadi data ini hanya bisa dinonaktifkan.`);
+    return;
+  }
+  confirmModal("Hapus Pengambil",`Yakin hapus <b>${esc(nama)}</b> dari daftar master?`,async ()=>{
     const res=await dbDeletePic(p.id);
     if(res.error){alertModal("Gagal menghapus",esc(res.error.message));return;}
     if(state.editingPicNama===nama)resetPicForm();
-    logAudit("delete","PIC",nama);
+    logAudit("delete","Pengambil",nama);
     await loadMasterData();
     render();
-    toast("PIC dihapus","success",nama);
+    toast("Pengambil dihapus","success",nama);
   },"Ya, Hapus");
 }
 
-// ==================== KELOLA BAGIAN ====================
+// Modal tambah pengambil cepat yang dipakai dari form Transaksi Gudang.
+// Operator boleh menambah; edit/nonaktif/hapus tetap Admin.
+function openAddPengambilModal(onSaved,onCancel){
+  openModal(`<div class="modal-title"><i data-lucide="user-plus"></i> Tambah Pengambil Barang</div><div class="modal-sub">Cukup nama dan divisi. Pengambil baru langsung bisa dipilih.</div>
+<div class="field"><label for="m-pg-nama">Nama <span style="color:var(--danger)">*</span></label><input type="text" id="m-pg-nama" placeholder="Cth: Budi Santoso" /></div>
+<div class="field"><label for="m-pg-divisi">Divisi</label><input type="text" id="m-pg-divisi" placeholder="Cth: Produksi / Packing" /></div>
+<div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-pg-save">Simpan Pengambil</button></div>`,onCancel);
+  document.querySelector("[data-cancel]").addEventListener("click",()=>closeModal(true));
+  const simpan=async()=>{
+    const nama=document.getElementById("m-pg-nama").value.trim();
+    const divisi=document.getElementById("m-pg-divisi").value.trim();
+    if(!nama){alertModal("Data belum lengkap","Nama pengambil wajib diisi.");return;}
+    if(picExists(nama)){alertModal("Sudah ada",`Pengambil "${esc(nama)}" sudah ada di daftar.`);return;}
+    const btn=document.getElementById("m-pg-save");
+    if(btn){btn.disabled=true;btn.textContent="Menyimpan...";}
+    const res=await dbInsertPic({nama,divisi,posisi:"",aktif:true});
+    if(res.error){
+      if(btn){btn.disabled=false;btn.textContent="Simpan Pengambil";}
+      alertModal("Gagal menyimpan",esc(res.error.message));return;
+    }
+    logAudit("create","Pengambil",nama,divisi||"-");
+    closeModal();
+    await loadMasterData();
+    render();
+    toast("Pengambil ditambahkan","success",nama);
+    if(typeof onSaved==="function")onSaved(nama);
+  };
+  document.getElementById("m-pg-save").addEventListener("click",simpan);
+  document.getElementById("m-pg-nama").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();simpan();} });
+}
 function openKelolaBagianModal(opts){
   opts=opts||{};
   const onChanged=opts.onChanged||null;
@@ -2235,10 +2293,10 @@ ${deltaCell(r.keluar, r.keluarPrev)}
     barangBody.innerHTML=`<tr class="empty-row"><td colspan="${colCount}">Tidak ada transaksi di periode ini.</td></tr>`;
   }
 
-  // ===== Per PIC =====
+  // ===== Per Pengambil (khusus OUT) =====
   const buildPicMap=(arr)=>{
     const m={};
-    arr.filter(t=>t.jenis==="Keluar").forEach(t=>{
+    arr.filter(t=>t.jenis==="Keluar"&&t.pic).forEach(t=>{
       m[t.pic]=m[t.pic]||{count:0,qty:0};
       m[t.pic].count+=1;
       m[t.pic].qty+=t.jumlah;
@@ -2247,7 +2305,7 @@ ${deltaCell(r.keluar, r.keluarPrev)}
   };
   const picMap=buildPicMap(rows);
   const picPrevMap=rowsPrev?buildPicMap(rowsPrev):null;
-  const picRows=Object.entries(picMap);
+  const picRows=Object.entries(picMap).sort((a,b)=>b[1].qty-a[1].qty);
 
   if(picRows.length){
     picBody.innerHTML=picRows.map(([pic,v])=>{
@@ -3189,6 +3247,7 @@ function openEditPembelianModal(key){
 function openEditTransaksiModal(idx){
   const t=DATA.transaksi[idx];
   const isAutoStock=t.refSJ!=null;
+  const isAdminUser=isAdmin();
   const buildBagianOptions=()=>{
     const list=[...DATA.bagianList];
     let html="";
@@ -3200,25 +3259,88 @@ function openEditTransaksiModal(idx){
     return html;
   };
   const buildPicOptions=()=>{
-    let html="";
-    if(t.pic&&!picByNama(t.pic)){
-      html+=`<option value="${esc(t.pic)}" selected>${esc(t.pic)} (tidak ada di master)</option>`;
+    const namaAwal=t.jenis==="Keluar"?t.pic:"";
+    const adaDiMaster=namaAwal&&DATA.picList.some(p=>p.nama===namaAwal);
+    const yatim=namaAwal&&!adaDiMaster;
+    let html=`<option value=""${(adaDiMaster||yatim)?"":" selected"}>-- Pilih pengambil --</option>`;
+    if(yatim){
+      html+=`<option value="${esc(namaAwal)}" selected>${esc(namaAwal)} (tidak ada di master)</option>`;
     }
-    html+=DATA.picList.map(p=>{
-      const label=p.aktif!==false?p.nama:`${p.nama} (nonaktif)`;
-      const selected=p.nama===t.pic?" selected":"";
+    html+=DATA.picList.filter(p=>p.aktif!==false||p.nama===namaAwal).map(p=>{
+      const label=p.aktif!==false?(p.divisi?`${p.nama} — ${p.divisi}`:p.nama):`${p.nama} (nonaktif)`;
+      const selected=p.nama===namaAwal?" selected":"";
       return `<option value="${esc(p.nama)}"${selected}>${esc(label)}</option>`;
     }).join("");
+    html+=`<option value="__new_pic__">+ Tambah pengambil baru...</option>`;
     return html;
   };
-  openModal(`<div class="modal-title">Edit Transaksi</div>${isAutoStock?`<div class="modal-sub" style="background:var(--warn-dim);border-color:var(--warn-border);color:var(--warn);padding:8px 10px;border-radius:8px;"><i data-lucide="link"></i> Transaksi ini berasal dari SJ <b>${esc(t.refSJ)}</b>. Tanggal, barang &amp; qty terkunci — ubah lewat tab Pembelian.</div>`:""}<div class="field"><label>Tanggal</label><input type="date" id="m-t-tgl" value="${fmtInputDate(t.tanggal)}" ${isAutoStock?"disabled":""} /></div><div class="field"><label>Jam</label><input type="time" id="m-t-jam" value="${esc(t.jam||"")}" ${isAutoStock?"disabled":""} /></div><div class="field"><label>Barang</label><select id="m-t-barang" ${isAutoStock?"disabled":""}>${DATA.items.map(i=>`<option value="${esc(i.kode)}" ${i.kode===t.kode?"selected":""}>${esc(i.nama)}</option>`).join("")}</select></div><div class="field"><label>Jenis</label><select id="m-t-jenis" ${isAutoStock?"disabled":""}><option value="Masuk" ${t.jenis==="Masuk"?"selected":""}>IN</option><option value="Keluar" ${t.jenis==="Keluar"?"selected":""}>OUT</option></select></div><div class="field"><label>Qty</label><input type="number" id="m-t-qty" value="${t.jumlah}" min="1" step="1" ${isAutoStock?"disabled":""} /></div><div class="field" id="m-t-bagian-wrap"><label style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>Bagian Pemakaian</span><button type="button" class="btn btn-secondary btn-tiny" id="m-t-kelola-bagian"><i data-lucide="settings"></i> Kelola</button></label><select id="m-t-bagian" ${isAutoStock?"disabled":""}>${buildBagianOptions()}</select></div><div class="field"><label>PIC</label><select id="m-t-pic">${buildPicOptions()}</select></div><div class="field"><label>Keterangan</label><input type="text" id="m-t-ket" value="${esc(t.ket||"")}" ${isAutoStock?"disabled":""} /></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan</button></div>`);
+  const picFieldHtml=`<div class="field" id="m-t-pic-wrap"><label>Diambil oleh</label><select id="m-t-pic">${buildPicOptions()}</select>
+<div id="m-t-pic-new" hidden style="margin-top:10px;border:1px dashed var(--line);border-radius:10px;padding:12px;background:var(--surface-raised);">
+<div class="field" style="margin-bottom:10px;"><label for="m-t-pic-nama" style="font-size:11px;">Nama Pengambil Baru <span style="color:var(--danger)">*</span></label><input type="text" id="m-t-pic-nama" placeholder="Cth: Budi Santoso" /></div>
+<div class="field" style="margin-bottom:10px;"><label for="m-t-pic-divisi" style="font-size:11px;">Divisi</label><input type="text" id="m-t-pic-divisi" placeholder="Cth: Produksi" /></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-primary btn-sm" type="button" id="m-t-pic-simpan" style="width:auto;">Simpan Pengambil</button><button class="btn btn-secondary btn-sm" type="button" id="m-t-pic-batal" style="width:auto;">Batal</button></div>
+</div></div>
+<div class="field" id="m-t-penerima-wrap" hidden><label>Diterima oleh</label><input type="text" id="m-t-penerima" value="${esc(t.jenis==="Masuk"?(t.pic||""):((CURRENT_SESSION&&CURRENT_SESSION.nama)||""))}" ${isAdminUser?"":"readonly"} /><div class="helper">${isAutoStock?"Nama penerima dari akun saat SJ disimpan. Stok & qty tetap dikunci di tab Pembelian.":(isAdminUser?"Nama penerima dari akun saat input. Admin boleh mengoreksi bila salah input.":"Otomatis dari akun yang input barang masuk.")}</div></div>`;
+  openModal(`<div class="modal-title">Edit Transaksi</div>${isAutoStock?`<div class="modal-sub" style="background:var(--warn-dim);border-color:var(--warn-border);color:var(--warn);padding:8px 10px;border-radius:8px;"><i data-lucide="link"></i> Transaksi ini berasal dari SJ <b>${esc(t.refSJ)}</b>. Tanggal, barang &amp; qty terkunci — ubah lewat tab Pembelian.</div>`:""}<div class="field"><label>Tanggal</label><input type="date" id="m-t-tgl" value="${fmtInputDate(t.tanggal)}" ${isAutoStock?"disabled":""} /></div><div class="field"><label>Jam</label><input type="time" id="m-t-jam" value="${esc(t.jam||"")}" ${isAutoStock?"disabled":""} /></div><div class="field"><label>Barang</label><select id="m-t-barang" ${isAutoStock?"disabled":""}>${DATA.items.map(i=>`<option value="${esc(i.kode)}" ${i.kode===t.kode?"selected":""}>${esc(i.nama)}</option>`).join("")}</select></div><div class="field"><label>Jenis</label><select id="m-t-jenis" ${isAutoStock?"disabled":""}><option value="Masuk" ${t.jenis==="Masuk"?"selected":""}>IN</option><option value="Keluar" ${t.jenis==="Keluar"?"selected":""}>OUT</option></select></div><div class="field"><label>Qty</label><input type="number" id="m-t-qty" value="${t.jumlah}" min="1" step="1" ${isAutoStock?"disabled":""} /></div><div class="field" id="m-t-bagian-wrap"><label style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>Bagian Pemakaian</span><button type="button" class="btn btn-secondary btn-tiny" id="m-t-kelola-bagian"><i data-lucide="settings"></i> Kelola</button></label><select id="m-t-bagian" ${isAutoStock?"disabled":""}>${buildBagianOptions()}</select></div>${picFieldHtml}<div class="field"><label>Keterangan</label><input type="text" id="m-t-ket" value="${esc(t.ket||"")}" ${isAutoStock?"disabled":""} /></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-cancel>Batal</button><button class="btn btn-primary" type="button" id="m-save">Simpan</button></div>`);
   const jenisSelect=document.getElementById("m-t-jenis");
   const bagianWrap=document.getElementById("m-t-bagian-wrap");
+  const picWrap=document.getElementById("m-t-pic-wrap");
+  const penerimaWrap=document.getElementById("m-t-penerima-wrap");
   const toggleBagian=()=>{
-    bagianWrap.style.display=jenisSelect.value==="Keluar"?"":"none";
+    const isOut=jenisSelect.value==="Keluar";
+    bagianWrap.style.display=isOut?"":"none";
+    if(picWrap)picWrap.hidden=!isOut;
+    if(penerimaWrap){
+      penerimaWrap.hidden=isOut;
+      if(!isOut&&t.jenis==="Keluar"){
+        const inp=document.getElementById("m-t-penerima");
+        if(inp&&!inp.value.trim())inp.value=(CURRENT_SESSION&&CURRENT_SESSION.nama)||"";
+      }
+    }
   };
   jenisSelect.addEventListener("change",toggleBagian);
   toggleBagian();
+  if(picWrap){
+    const newPanel=document.getElementById("m-t-pic-new");
+    document.getElementById("m-t-pic").addEventListener("change",e=>{
+      if(e.target.value==="__new_pic__"){
+        e.target.value="";
+        if(newPanel){
+          newPanel.hidden=false;
+          const inp=document.getElementById("m-t-pic-nama");
+          if(inp)setTimeout(()=>inp.focus(),40);
+        }
+      }
+    });
+    if(newPanel){
+      const tutupPanel=()=>{
+        newPanel.hidden=true;
+        document.getElementById("m-t-pic-nama").value="";
+        document.getElementById("m-t-pic-divisi").value="";
+      };
+      document.getElementById("m-t-pic-batal").addEventListener("click",tutupPanel);
+      document.getElementById("m-t-pic-simpan").addEventListener("click",async ()=>{
+        const nama=document.getElementById("m-t-pic-nama").value.trim();
+        const divisi=document.getElementById("m-t-pic-divisi").value.trim();
+        if(!nama){alertModal("Data belum lengkap","Nama pengambil wajib diisi.");return;}
+        if(picExists(nama)){alertModal("Sudah ada",`Pengambil "${esc(nama)}" sudah ada di daftar.`);return;}
+        const btn=document.getElementById("m-t-pic-simpan");
+        if(btn){btn.disabled=true;btn.textContent="Menyimpan...";}
+        const res=await dbInsertPic({nama,divisi,posisi:"",aktif:true});
+        if(res.error){
+          if(btn){btn.disabled=false;btn.textContent="Simpan Pengambil";}
+          alertModal("Gagal menyimpan",esc(res.error.message));return;
+        }
+        logAudit("create","Pengambil",nama,divisi||"-");
+        DATA.picList = await dbLoadPic();
+        renderPicList();
+        const s=document.getElementById("m-t-pic");
+        if(s){ s.innerHTML=buildPicOptions(); s.value=nama; }
+        tutupPanel();
+        toast("Pengambil ditambahkan","success",nama);
+      });
+    }
+  }
   document.getElementById("m-t-kelola-bagian").addEventListener("click",()=>{
     openKelolaBagianModal({onChanged:()=>{
       const s=document.getElementById("m-t-bagian");
@@ -3236,6 +3358,10 @@ function openEditTransaksiModal(idx){
     const jenis=document.getElementById("m-t-jenis").value;
     const kode=document.getElementById("m-t-barang").value;
     const qty=parseNumber(document.getElementById("m-t-qty").value);
+    const pic=jenis==="Masuk"
+      ? (document.getElementById("m-t-penerima")?.value||"").trim()
+      : (document.getElementById("m-t-pic")?.value||"").trim();
+    if(!pic){alertModal("Data belum lengkap",jenis==="Masuk"?"Nama penerima wajib diisi.":"Pilih pengambil barang dulu.");return;}
     if(!isValidInt(qty)||qty<=0){alertModal("Jumlah tidak valid","Jumlah harus berupa bilangan bulat positif (contoh: 1, 2, 10).");return;}
     if(jenis==="Keluar"){
       const s=currentStock(kode,idx);
@@ -3245,7 +3371,7 @@ function openEditTransaksiModal(idx){
       tanggal:new Date(tglVal+"T00:00:00"),
       jam:document.getElementById("m-t-jam").value||t.jam||null,
       kode,jenis,jumlah:qty,
-      pic:document.getElementById("m-t-pic").value,
+      pic,
       ket:document.getElementById("m-t-ket").value.trim(),
       bagian:jenis==="Keluar"?document.getElementById("m-t-bagian").value:"",
       refKey:t.refKey
@@ -3409,11 +3535,18 @@ document.getElementById("f-jam").value=nowHHMM();
 const fBarangEl=document.getElementById("f-barang");
 fBarangEl.addEventListener("change",()=>{ fBarangEl.dataset.prevValue=fBarangEl.value; });
 document.getElementById("f-pic").addEventListener("change",e=>{
-  if(e.target.value==="__new_pic__"){
-    e.target.value=picNamaList()[0]||"";
-    state.activeTab="pic";render();resetPicForm();
-    setTimeout(()=>{ const el=document.getElementById("pic-nama"); if(el)el.focus(); },100);
-  }
+  const sel=e.target;
+  if(sel.value!=="__new_pic__"){ sel.dataset.prevValue=sel.value; return; }
+  const prev=sel.dataset.prevValue||"";
+  sel.value=prev;
+  openAddPengambilModal(nama=>{
+    populateSelects();
+    const s=document.getElementById("f-pic");
+    if(s){ s.value=nama; s.dataset.prevValue=nama; }
+  },()=>{
+    const s=document.getElementById("f-pic");
+    if(s)s.value=prev;
+  });
 });
 document.getElementById("btn-kelola-bagian").addEventListener("click",()=>openKelolaBagianModal());
 document.getElementById("btn-kelola-barang-master").addEventListener("click",()=>openKelolaBarangModal());
@@ -3422,13 +3555,21 @@ document.getElementById("form-transaksi").addEventListener("submit",async e=>{
   const kode=document.getElementById("f-barang").value;
   const jenis=document.getElementById("f-jenis").value;
   const qty=parseNumber(document.getElementById("f-qty").value);
-  const pic=document.getElementById("f-pic").value.trim();
+  const pic=jenis==="Masuk"
+    ? ((CURRENT_SESSION&&CURRENT_SESSION.nama)||"").trim()
+    : document.getElementById("f-pic").value.trim();
   const ket=document.getElementById("f-ket").value.trim();
   const tglVal=document.getElementById("f-tanggal").value;
   const jamVal=document.getElementById("f-jam").value||nowHHMM();
   const bagian=document.getElementById("f-bagian").value;
-  if(!kode||!pic){
-    alertModal("Data belum lengkap","Lengkapi Barang, QTY, dan PIC dulu.");return;
+  if(!kode){
+    alertModal("Data belum lengkap","Pilih Barang dulu.");return;
+  }
+  if(jenis==="Keluar"&&!pic){
+    alertModal("Data belum lengkap","Pilih <b>Diambil oleh</b> (pengambil barang) dulu.");return;
+  }
+  if(!pic){
+    alertModal("Data belum lengkap","Nama penerima tidak terbaca dari akun. Coba login ulang.");return;
   }
   if(!isValidInt(qty)||qty<=0){
     alertModal("Jumlah tidak valid","Jumlah harus berupa bilangan bulat positif (contoh: 1, 2, 10).");return;
@@ -3452,7 +3593,7 @@ document.getElementById("form-transaksi").addEventListener("submit",async e=>{
   if(res.error){
     alertModal("Gagal menyimpan",esc(res.error.message));return;
   }
-  logAudit("create","Transaksi",`${jenis} ${kode}`,`${qty} ${itemByKode(kode).satuan} - PIC ${pic}`);
+  logAudit("create","Transaksi",`${jenis} ${kode}`,`${qty} ${itemByKode(kode).satuan} - ${jenis==="Masuk"?"Penerima":"Pengambil"} ${pic}`);
   document.getElementById("f-qty").value="";
   document.getElementById("f-pic").value="";
   document.getElementById("f-ket").value="";
@@ -3463,7 +3604,14 @@ document.getElementById("form-transaksi").addEventListener("submit",async e=>{
   setTimeout(checkStockAndNotify,500);
 });
 function toggleBagianField(){
-  document.getElementById("f-bagian-wrap").style.display=document.getElementById("f-jenis").value==="Keluar"?"":"none";
+  const jenis=document.getElementById("f-jenis").value;
+  document.getElementById("f-bagian-wrap").style.display=jenis==="Keluar"?"":"none";
+  document.getElementById("f-pic-wrap").hidden=jenis!=="Keluar";
+  const wrapPenerima=document.getElementById("f-penerima-wrap");
+  wrapPenerima.hidden=jenis!=="Masuk";
+  if(jenis==="Masuk"){
+    document.getElementById("f-penerima").value=(CURRENT_SESSION&&CURRENT_SESSION.nama)||"";
+  }
 }
 document.getElementById("f-jenis").addEventListener("change",toggleBagianField);
 toggleBagianField();
@@ -3533,7 +3681,7 @@ document.getElementById("riwayat-body").addEventListener("click",e=>{
       if(!t)return;
       const res=await dbDeleteTransaksi(t.id);
       if(res.error){alertModal("Gagal menghapus",esc(res.error.message));return;}
-      logAudit("delete","Transaksi",`${t.jenis} ${t.kode}`,`${t.jumlah} - PIC ${t.pic}`);
+      logAudit("delete","Transaksi",`${t.jenis} ${t.kode}`,`${t.jumlah} - ${t.jenis==="Masuk"?"Penerima":"Pengambil"} ${t.pic}`);
       await loadTransaksi();
       render();
       toast("Transaksi dihapus","success");
@@ -3598,46 +3746,55 @@ document.getElementById("form-pic").addEventListener("submit",async e=>{
   e.preventDefault();
   const nama=document.getElementById("pic-nama").value.trim();
   const divisi=document.getElementById("pic-divisi").value.trim();
-  const posisi=document.getElementById("pic-posisi").value.trim();
-  const aktif=document.getElementById("pic-aktif").checked;
-  if(!nama){alertModal("Data belum lengkap","Nama PIC wajib diisi.");return;}
+  const admin=canManageMaster();
+  const aktif=admin?document.getElementById("pic-aktif").checked:true;
+  if(!nama){alertModal("Data belum lengkap","Nama pengambil wajib diisi.");return;}
+  if(state.editingPicNama&&!admin){alertModal("Akses ditolak","Hanya Admin yang bisa mengubah data pengambil.");return;}
   if(state.editingPicNama){
     const oldNama=state.editingPicNama;
     const p=picByNama(oldNama);
-    if(!p){alertModal("PIC tidak ditemukan","");resetPicForm();return;}
-    if(nama!==oldNama&&picByNama(nama)){alertModal("Sudah ada",`PIC "${nama}" sudah ada.`);return;}
+    if(!p){alertModal("Pengambil tidak ditemukan","");resetPicForm();return;}
+    const bentrok=DATA.picList.find(x=>x.id!==p.id&&x.nama.trim().toLowerCase()===nama.trim().toLowerCase());
+    if(bentrok){alertModal("Sudah ada",`Pengambil "${esc(nama)}" sudah ada.`);return;}
     if(nama!==oldNama){
-      const affected=DATA.transaksi.filter(t=>t.pic===oldNama);
+      const affected=DATA.transaksi.filter(t=>t.jenis==="Keluar"&&t.pic===oldNama);
       const applyRename=async alsoUpdateTrx=>{
-        const res=await dbUpdatePic(p.id,{nama,divisi,posisi,aktif});
+        const res=await dbUpdatePic(p.id,{nama,divisi,posisi:p.posisi||"",aktif});
         if(res.error){alertModal("Gagal menyimpan",esc(res.error.message));return;}
-        if(alsoUpdateTrx)affected.forEach(t=>{t.pic=nama;});
-        logAudit("update","PIC",`${oldNama} -> ${nama}`);
+        if(alsoUpdateTrx&&affected.length>0){
+          const upd=await dbRenamePicTransaksi(oldNama,nama);
+          if(upd.error){
+            // Batalkan perubahan nama di master supaya tetap konsisten dengan riwayat.
+            await dbUpdatePic(p.id,{nama:oldNama,divisi:p.divisi,posisi:p.posisi||"",aktif:p.aktif!==false});
+            alertModal("Gagal memperbarui riwayat",esc(upd.error.message));return;
+          }
+        }
+        logAudit("update","Pengambil",`${oldNama} -> ${nama}`);
         await loadMasterData();
         resetPicForm();render();
-        toast("PIC diperbarui","success",`${oldNama} -> ${nama}${alsoUpdateTrx?` (${affected.length} trx)`:""}`);
+        toast("Pengambil diperbarui","success",`${oldNama} -> ${nama}${alsoUpdateTrx?` (${affected.length} trx)`:""}`);
       };
       if(affected.length>0){
-        confirmModal("Update Transaksi Lama?",`Ada <b>${affected.length}</b> transaksi lama yang memakai PIC <b>${esc(oldNama)}</b>.`,()=>applyRename(true),"Ya, Update Semua",()=>applyRename(false),"Master Saja");
+        confirmModal("Update Transaksi Lama?",`Ada <b>${affected.length}</b> transaksi lama yang memakai nama <b>${esc(oldNama)}</b>. Riwayat ikut diperbarui?`,()=>applyRename(true),"Ya, Update Semua",()=>applyRename(false),"Master Saja");
       }else{
         await applyRename(false);
       }
     }else{
-      const res=await dbUpdatePic(p.id,{nama,divisi,posisi,aktif});
+      const res=await dbUpdatePic(p.id,{nama,divisi,posisi:p.posisi||"",aktif});
       if(res.error){alertModal("Gagal menyimpan",esc(res.error.message));return;}
-      logAudit("update","PIC",nama);
+      logAudit("update","Pengambil",nama);
       await loadMasterData();
       resetPicForm();render();
-      toast("PIC diperbarui","success",nama);
+      toast("Pengambil diperbarui","success",nama);
     }
   }else{
-    if(picByNama(nama)){alertModal("Sudah ada",`PIC "${nama}" sudah ada.`);return;}
-    const res=await dbInsertPic({nama,divisi,posisi,aktif});
+    if(picExists(nama)){alertModal("Sudah ada",`Pengambil "${esc(nama)}" sudah ada.`);return;}
+    const res=await dbInsertPic({nama,divisi,posisi:"",aktif});
     if(res.error){alertModal("Gagal menyimpan",esc(res.error.message));return;}
-    logAudit("create","PIC",nama,`${divisi||"-"} - ${posisi||"-"}`);
+    logAudit("create","Pengambil",nama,divisi||"-");
     await loadMasterData();
     resetPicForm();render();
-    toast("PIC ditambahkan","success",`${nama}${aktif?"":" (nonaktif)"}`);
+    toast("Pengambil ditambahkan","success",`${nama}${aktif?"":" (nonaktif)"}`);
   }
 });
 document.getElementById("btn-pic-reset").addEventListener("click",()=>resetPicForm());
@@ -3649,6 +3806,7 @@ document.getElementById("pic-list").addEventListener("click",e=>{
   if(ed){loadPicToForm(ed.dataset.editPic);return;}
   const toggle=e.target.closest("[data-toggle-pic]");
   if(toggle){
+    if(!canManageMaster()){alertModal("Akses ditolak","Hanya Admin yang bisa mengaktifkan atau menonaktifkan pengambil.");return;}
     const nama=toggle.dataset.togglePic;
     const wasAktif=toggle.dataset.aktif==="true";
     const p=picByNama(nama);
@@ -3656,10 +3814,10 @@ document.getElementById("pic-list").addEventListener("click",e=>{
     (async ()=>{
       const res=await dbUpdatePic(p.id,{nama:p.nama,divisi:p.divisi,posisi:p.posisi,aktif:!wasAktif});
       if(res.error){alertModal("Gagal menyimpan",esc(res.error.message));return;}
-      logAudit("update","PIC",nama,wasAktif?"dinonaktifkan":"diaktifkan");
+      logAudit("update","Pengambil",nama,wasAktif?"dinonaktifkan":"diaktifkan");
       await loadMasterData();
       render();
-      toast(wasAktif?"PIC dinonaktifkan":"PIC diaktifkan","success",`${nama}${wasAktif?" - tidak muncul di dropdown input baru":""}`);
+      toast(wasAktif?"Pengambil dinonaktifkan":"Pengambil diaktifkan","success",`${nama}${wasAktif?" - tidak muncul di dropdown input baru":""}`);
     })();
     return;
   }

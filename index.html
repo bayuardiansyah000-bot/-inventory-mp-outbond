@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.451.0/dist/umd/lucide.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='M3 9h18'/%3E%3Cpath d='M9 21V9'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="css/style.css?v=35" />
+<link rel="stylesheet" href="css/style.css?v=36" />
 </head>
 
 
@@ -57,7 +57,7 @@
 <button class="sb-item" data-tab="transaksi" aria-selected="false"><i data-lucide="clipboard-list"></i><span>Transaksi Gudang</span></button>
 <button class="sb-item" data-tab="pembelian" aria-selected="false"><i data-lucide="shopping-cart"></i><span>Pembelian</span></button>
 <button class="sb-item" data-tab="vendor" aria-selected="false"><i data-lucide="building-2"></i><span>Vendor &amp; Barang</span></button>
-<button class="sb-item" data-tab="pic" aria-selected="false"><i data-lucide="user"></i><span>PIC</span></button>
+<button class="sb-item" data-tab="pic" aria-selected="false"><i data-lucide="user"></i><span>Pengambil Barang</span></button>
 <button class="sb-item" data-tab="laporan" aria-selected="false"><i data-lucide="bar-chart-3"></i><span>Laporan</span></button>
 <button class="sb-item" data-tab="petunjuk" aria-selected="false"><i data-lucide="book-open"></i><span>Petunjuk & Fitur</span></button>
 </nav>
@@ -161,7 +161,16 @@
 <select id="f-bagian"></select>
 </div>
 <div class="field"><label for="f-qty">QTY</label><input type="number" id="f-qty" min="1" step="1" required /></div>
-<div class="field"><label for="f-pic">PIC</label><select id="f-pic" required></select></div>
+<div class="field" id="f-pic-wrap">
+<label for="f-pic">Diambil oleh <span style="color:var(--danger)">*</span></label>
+<select id="f-pic"></select>
+<div class="helper">Pilih pengambil barang. Ada opsi <b>+ Tambah pengambil baru</b> di daftar.</div>
+</div>
+<div class="field" id="f-penerima-wrap" hidden>
+<label for="f-penerima">Diterima oleh</label>
+<input type="text" id="f-penerima" readonly />
+<div class="helper">Otomatis dari akun penjaga gudang yang sedang login.</div>
+</div>
 </div>
 <div class="field" style="margin-top:16px;"><label for="f-ket">Keterangan</label><input type="text" id="f-ket" placeholder="Cth: Penyesuaian / Retur" /></div>
 <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;"><button type="submit" class="btn btn-primary" style="width:auto;padding:10px 28px;">Simpan Transaksi</button></div>
@@ -179,12 +188,12 @@
 <span class="lbl">Filter:</span>
 <select id="f-riwayat-jenis" class="filter-select"><option value="">Semua Tipe</option><option value="Masuk">IN (Masuk)</option><option value="Keluar">OUT (Keluar)</option></select>
 <select id="f-riwayat-barang" class="filter-select"><option value="">Semua Barang</option></select>
-<select id="f-riwayat-pic" class="filter-select"><option value="">Semua PIC</option></select>
+<select id="f-riwayat-pic" class="filter-select"><option value="">Semua Pengambil / Penerima</option></select>
 <select id="f-riwayat-bagian" class="filter-select"><option value="">Semua Bagian</option></select>
 <button class="btn btn-secondary btn-sm" id="btn-reset-filter" type="button" style="width:auto;">↻ Reset</button>
 </div>
 </div>
-<div class="table-wrap"><table class="data"><thead><tr><th data-sort="tanggal">Tgl</th><th>Kode</th><th data-sort="barang">Nama Barang</th><th data-sort="jenis">Tipe</th><th data-sort="qty" style="text-align:right">Qty</th><th>PIC</th><th>Ket</th><th>Aksi</th></tr></thead><tbody id="riwayat-body"></tbody></table></div>
+<div class="table-wrap"><table class="data"><thead><tr><th data-sort="tanggal">Tgl</th><th>Kode</th><th data-sort="barang">Nama Barang</th><th data-sort="jenis">Tipe</th><th data-sort="qty" style="text-align:right">Qty</th><th>Pengambil / Penerima</th><th>Ket</th><th>Aksi</th></tr></thead><tbody id="riwayat-body"></tbody></table></div>
 <div class="table-footer"><span id="riwayat-count"></span><div class="pager" id="riwayat-pager"></div></div>
 </div>
 </section>
@@ -265,7 +274,7 @@
 <div class="field"><label for="v-nama">Nama Vendor <span style="color:var(--danger)">*</span></label><input type="text" id="v-nama" placeholder="Cth: PT Niaga Mas Sukses" required /></div>
 </div>
 <div class="form-inline" style="grid-template-columns:1fr 1.5fr;margin-top:14px;">
-<div class="field"><label for="v-pic">PIC / Kontak</label><input type="text" id="v-pic" placeholder="Cth: IRWAN" /></div>
+<div class="field"><label for="v-pic">Kontak Vendor</label><input type="text" id="v-pic" placeholder="Cth: IRWAN" /></div>
 <div class="field"><label for="v-hp">No. HP</label><input type="text" id="v-hp" placeholder="Cth: +62 812-xxxx-xxxx" /></div>
 </div>
 <div class="field" style="margin-top:14px;"><label for="v-alamat">Alamat</label><input type="text" id="v-alamat" placeholder="Alamat lengkap" /></div>
@@ -289,8 +298,8 @@
 </form>
 </div>
 <div class="section">
-<div class="section-title">Daftar Vendor<input type="text" id="vendor-search" style="border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12px;background:var(--surface);width:auto;color:var(--ink);" placeholder="Cari kode/nama/PIC..." /></div>
-<div class="table-wrap"><table class="data"><thead><tr><th>Kode</th><th>Nama Vendor</th><th>PIC / Kontak</th><th>No. HP</th><th>Alamat</th><th>Jenis Barang / Produk</th><th style="text-align:right">Aksi</th></tr></thead><tbody id="vendor-list"></tbody></table></div>
+<div class="section-title">Daftar Vendor<input type="text" id="vendor-search" style="border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12px;background:var(--surface);width:auto;color:var(--ink);" placeholder="Cari kode/nama/kontak..." /></div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Kode</th><th>Nama Vendor</th><th>Kontak</th><th>No. HP</th><th>Alamat</th><th>Jenis Barang / Produk</th><th style="text-align:right">Aksi</th></tr></thead><tbody id="vendor-list"></tbody></table></div>
 </div>
 </div>
 
@@ -305,24 +314,23 @@
 
 <section class="panel" id="panel-pic" role="tabpanel" hidden>
 <div class="section">
-<div class="section-title"><span class="st-main"><i data-lucide="user"></i> Tambah / Edit PIC</span></div>
+<div class="section-title"><span class="st-main"><i data-lucide="user"></i> <span id="pic-form-title">Tambah / Edit Pengambil Barang</span></span></div>
 <form id="form-pic">
-<div class="form-inline">
-<div class="field"><label for="pic-nama">Nama PIC <span style="color:var(--danger)">*</span></label><input type="text" id="pic-nama" placeholder="Cth: Budi Santoso" required /></div>
+<div class="form-inline" style="grid-template-columns:1fr 1fr;">
+<div class="field"><label for="pic-nama">Nama Pengambil <span style="color:var(--danger)">*</span></label><input type="text" id="pic-nama" placeholder="Cth: Budi Santoso" required /></div>
 <div class="field"><label for="pic-divisi">Divisi</label><input type="text" id="pic-divisi" placeholder="Cth: Gudang / Administrasi" /></div>
-<div class="field"><label for="pic-posisi">Posisi / Jabatan</label><input type="text" id="pic-posisi" placeholder="Cth: Operator / Supervisor" /></div>
 </div>
 <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
-<button type="submit" class="btn btn-primary" id="btn-pic-save" style="width:auto;padding:10px 24px;">Simpan PIC</button>
+<button type="submit" class="btn btn-primary" id="btn-pic-save" style="width:auto;padding:10px 24px;">Simpan Pengambil</button>
 <button type="button" class="btn btn-secondary" id="btn-pic-reset" style="width:auto;">Reset</button>
-<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-muted);cursor:pointer;"><input type="checkbox" id="pic-aktif" checked style="width:auto;" />Aktif (bisa dipilih saat input transaksi)</label>
-<span class="mode-badge" id="pic-mode-hint"><i data-lucide="pencil-line"></i> Tambah PIC Baru</span>
+<label id="pic-aktif-wrap" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-muted);cursor:pointer;"><input type="checkbox" id="pic-aktif" checked style="width:auto;" />Aktif (bisa dipilih saat input transaksi)</label>
+<span class="mode-badge" id="pic-mode-hint"><i data-lucide="pencil-line"></i> Tambah Pengambil Baru</span>
 </div>
 </form>
 </div>
 <div class="section">
-<div class="section-title">Daftar PIC<input type="text" id="pic-search" style="border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12px;background:var(--surface);width:auto;color:var(--ink);" placeholder="Cari nama/divisi/posisi..." /></div>
-<div class="table-wrap"><table class="data"><thead><tr><th>Nama</th><th>Divisi</th><th>Posisi / Jabatan</th><th style="text-align:center">Transaksi</th><th style="text-align:center">Status</th><th style="text-align:right">Aksi</th></tr></thead><tbody id="pic-list"></tbody></table></div>
+<div class="section-title">Daftar Pengambil Barang<input type="text" id="pic-search" style="border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12px;background:var(--surface);width:auto;color:var(--ink);" placeholder="Cari nama/divisi..." /></div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Nama</th><th>Divisi</th><th style="text-align:center">Transaksi OUT</th><th style="text-align:center">Status</th><th style="text-align:right">Aksi</th></tr></thead><tbody id="pic-list"></tbody></table></div>
 </div>
 </section>
 
@@ -371,10 +379,10 @@
 </tr></thead><tbody id="rekap-barang-body"></tbody></table></div>
 </div>
 <div class="section">
-<div class="section-title">Rekap per PIC (berdasarkan transaksi OUT)</div>
+<div class="section-title">Rekap per Pengambil Barang (berdasarkan transaksi OUT)</div>
 <div class="table-wrap"><table class="data"><thead><tr>
-<th>PIC</th>
-<th>Divisi / Posisi</th>
+<th>Pengambil</th>
+<th>Divisi</th>
 <th style="text-align:right">Jumlah Transaksi</th>
 <th style="text-align:right">Total Qty Keluar</th>
 <th id="th-cmp-pic" style="text-align:right;display:none;">Δ vs Bulan Lalu</th>
@@ -493,10 +501,10 @@ Ringkasan harian kondisi gudang. Berisi:
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
 Tempat mencatat barang <b>masuk</b> (IN) dan <b>keluar</b> (OUT).
 <ul style="margin:8px 0 0 20px;padding:0;">
-<li><b>Form Transaksi</b> — isi: Tanggal, Jam, Jenis (IN/OUT), Barang, Bagian Pemakaian (khusus OUT), QTY, PIC, Keterangan.</li>
+<li><b>Form Transaksi</b> — isi: Tanggal, Jam, Jenis (IN/OUT), Barang, Bagian Pemakaian (khusus OUT), QTY, dan Keterangan. Untuk <b>OUT</b> pilih <b>Diambil oleh</b> (pengambil barang). Untuk <b>IN</b>, kolom <b>Diterima oleh</b> otomatis terisi nama akun penjaga gudang yang sedang login (read-only).</li>
 <li><b>Stok Cepat</b> — chip ringkasan stok di atas form; klik untuk langsung memilih barang.</li>
 <li>Sistem akan <b>blokir transaksi OUT</b> kalau stok tidak cukup.</li>
-<li><b>Riwayat Gudang</b> — tabel semua transaksi. Bisa di-filter berdasarkan periode, tipe, barang, PIC, dan bagian. Klik kolom judul untuk urutkan (sort). Riwayat ditampilkan 20 baris per halaman.</li>
+<li><b>Riwayat Gudang</b> — tabel semua transaksi. Bisa di-filter berdasarkan periode, tipe, barang, pengambil/penerima, dan bagian. Klik kolom judul untuk urutkan (sort). Riwayat ditampilkan 20 baris per halaman.</li>
 <li>Tombol <b>Edit</b> dan <b>Hapus</b> hanya tersedia untuk <b>Admin</b>. Transaksi auto-stock tidak bisa dihapus langsung dari tab ini — untuk mengubah qty, edit SJ di tab Pembelian agar stok ikut tersinkron.</li>
 <li><b>Kelola Bagian</b> — tombol <i data-lucide="settings"></i> di form untuk tambah/ubah nama bagian pemakaian (Admin).</li>
 </ul>
@@ -533,24 +541,29 @@ Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
 <div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="building-2"></i> Vendor &amp; Barang</div>
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
 <ul style="margin:8px 0 0 20px;padding:0;">
-<li><b>Tambah / Edit Vendor</b> — isi kode, nama, PIC, HP, alamat. Klik <b>Edit</b> pada tabel vendor → form otomatis terisi &amp; layar scroll ke atas.</li>
+<li><b>Tambah / Edit Vendor</b> — isi kode, nama, kontak, HP, alamat. Klik <b>Edit</b> pada tabel vendor → form otomatis terisi &amp; layar scroll ke atas.</li>
 <li><b>Barang yang Disuplai</b> — tentukan barang yang dijual tiap vendor, plus <b>Type/Ukuran</b> (mis. "50 yard"). Saat input SJ, hanya barang dari daftar ini yang muncul. Kalau vendor belum punya daftar, semua barang tampil sebagai cadangan.</li>
 <li><b>Daftar Vendor</b> — tabel semua vendor, bisa dicari.</li>
 <li><b>Master Barang</b> — tabel semua barang yang dipakai. Klik <b><i data-lucide="settings"></i> Kelola Barang</b> untuk tambah/edit barang atau ubah stok minimum (ROP).</li>
-<li>Tambah/edit/hapus master vendor, barang, dan PIC hanya bisa dilakukan <b>Admin</b>.</li>
+<li>Tambah/edit/hapus master vendor dan barang hanya bisa dilakukan <b>Admin</b>.</li>
 </ul>
 </div>
 </div>
 
-<!-- 5. PIC -->
+<!-- 5. PENGAMBIL BARANG -->
 <div style="padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:14px;background:var(--surface);">
-<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="user"></i> PIC</div>
+<div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="user"></i> Pengambil Barang</div>
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
+Master karyawan yang <b>mengambil barang</b> (transaksi OUT). Ini terpisah dari akun login — pengambil barang belum tentu punya akun.
 <ul style="margin:8px 0 0 20px;padding:0;">
-<li><b>Tambah / Edit PIC</b> — isi nama, divisi, posisi. Centang "Aktif" agar muncul di dropdown saat input transaksi.</li>
-<li><b>Daftar PIC</b> — lihat jumlah transaksi per orang, status aktif/nonaktif, dan tombol Edit / Nonaktifkan.</li>
-<li>Tombol <b>Hapus</b> muncul setelah PIC dinonaktifkan — mencegah PIC yang masih dipakai terhapus. Tambah/edit/hapus PIC hanya untuk <b>Admin</b>.</li>
-<li>PIC yang <b>nonaktif</b> tidak akan muncul di dropdown input transaksi baru, tapi transaksi lama tetap tercatat.</li>
+<li><b>Tambah / Edit Pengambil</b> — cukup isi nama dan divisi. Centang "Aktif" agar muncul di dropdown saat input transaksi OUT.</li>
+<li><b>Tambah cepat dari form</b> — di dropdown <b>Diambil oleh</b>, pilih <b>+ Tambah pengambil baru</b>. Isian form transaksi tidak hilang dan pengambil baru langsung terpilih.</li>
+<li><b>Daftar Pengambil Barang</b> — lihat jumlah transaksi OUT per orang, status aktif/nonaktif, dan tombol Edit / Nonaktifkan.</li>
+<li><b>Operator</b> boleh menambah pengambil baru. Edit, nonaktifkan, dan hapus hanya untuk <b>Admin</b>.</li>
+<li>Pengambil yang sudah dipakai di transaksi <b>tidak bisa dihapus</b> — hanya bisa dinonaktifkan, supaya riwayat tetap utuh.</li>
+<li>Kalau nama pengambil diubah, Admin bisa memilih untuk <b>ikut memperbarui transaksi lama</b> supaya riwayat dan laporan tetap konsisten.</li>
+<li>Pengambil yang <b>nonaktif</b> tidak akan muncul di dropdown input transaksi baru, tapi transaksi lama tetap tercatat.</li>
+<li>Transaksi <b>IN</b> tidak memakai daftar ini — nama penerima otomatis dari akun penjaga gudang yang login.</li>
 </ul>
 </div>
 </div>
@@ -564,7 +577,7 @@ Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
 <li>Pilih periode dengan <b>isi manual</b> atau <b>tombol cepat</b> (Hari ini, 7 hari, 30 hari, 90 hari, Bulan ini, Bulan lalu, Tahun ini).</li>
 <li>Klik <b>Tampilkan</b> untuk render laporan.</li>
 <li><b>Rekap per Barang</b> — total IN, OUT, dan rata-rata OUT/hari.</li>
-<li><b>Rekap per PIC</b> — jumlah transaksi + total qty keluar per PIC.</li>
+<li><b>Rekap per Pengambil Barang</b> — jumlah transaksi + total qty keluar per pengambil (khusus transaksi OUT).</li>
 <li><b>Centang "Bandingkan dengan bulan kalender sebelumnya"</b> → muncul banner pembanding + kolom <b>Δ vs Bulan Lalu</b> dengan badge warna:
   <ul style="margin:4px 0 0 16px;">
   <li><span class="cmp-delta up" style="font-size:10px;">▲ +12 (+57%)</span> = pemakaian naik (perlu perhatian)</li>
@@ -602,7 +615,7 @@ Referensi lengkap tentang semua tab dan fitur. Cocok untuk training user baru at
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="search"></i> Pencarian Global</div>
 <div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
-Klik kotak search di header, atau tekan <b>Ctrl + K</b>. Cari apa saja: SJ, invoice, vendor, barang, PIC, transaksi. Hasil dikelompokkan per kategori. Klik salah satu hasil → otomatis pindah ke tab yang sesuai, scroll ke baris, dan <b>highlight kuning</b> baris itu.
+Klik kotak search di header, atau tekan <b>Ctrl + K</b>. Cari apa saja: SJ, invoice, vendor, barang, pengambil barang, transaksi. Hasil dikelompokkan per kategori. Klik salah satu hasil → otomatis pindah ke tab yang sesuai, scroll ke baris, dan <b>highlight kuning</b> baris itu.
 </div>
 </div>
 
@@ -658,8 +671,8 @@ Notifikasi stok otomatis dikirim ke grup dan chat pribadi setiap <b>08:00 &amp; 
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="users"></i> Role Admin vs Operator</div>
 <div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
-<b>Admin</b> — akses penuh: kelola user, edit/hapus data, kelola master barang/vendor/PIC, lihat &amp; bersihkan audit log.<br>
-<b>Operator</b> — input transaksi &amp; SJ serta lihat laporan. Edit/hapus transaksi/SJ, kelola master, dan audit log hanya untuk Admin.
+<b>Admin</b> — akses penuh: kelola user, edit/hapus data, kelola master barang/vendor/pengambil barang, lihat &amp; bersihkan audit log.<br>
+<b>Operator</b> — input transaksi &amp; SJ, tambah pengambil barang baru, serta lihat laporan. Edit/hapus transaksi/SJ, edit/nonaktif/hapus pengambil, kelola master lain, dan audit log hanya untuk Admin.
 </div>
 </div>
 
@@ -869,6 +882,16 @@ Artinya bulan lalu barang ini belum ada transaksi sama sekali (0). Bulan ini bar
 </div>
 
 <div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Kenapa kolom "Diterima oleh" tidak bisa diisi?</b><br>
+Itu memang otomatis. Untuk transaksi <b>IN</b>, nama penerima diambil dari akun penjaga gudang yang sedang login — tujuannya supaya tercatat siapa yang benar-benar menerima barang. Kalau salah input, Admin bisa mengoreksinya lewat tombol <b>Edit</b>.
+</div>
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Nama pengambil barang belum ada di daftar, harus ke tab lain?</b><br>
+Tidak perlu. Di form transaksi OUT, buka dropdown <b>Diambil oleh</b> lalu pilih <b>+ Tambah pengambil baru</b>. Isi nama dan divisi, simpan, dan nama itu langsung terpilih tanpa kehilangan isian form lainnya. Operator juga boleh menambah.
+</div>
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
 <b style="color:var(--ink);"><i data-lucide="circle-help"></i> Bagaimana cara mengembalikan data yang terhapus?</b><br>
 Sayangnya <b>belum ada tombol Undo</b>. Data tersimpan permanen di database, jadi yang terhapus tidak bisa dikembalikan lewat aplikasi. Hati-hati saat menghapus — pastikan data memang sudah tidak diperlukan.
 </div>
@@ -923,9 +946,21 @@ Hubungi <b>Admin sistem</b>. Sertakan screenshot layar + pesan error di Console 
 </div>
 
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">OUT</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Barang Keluar</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Transaksi pengambilan barang dari gudang. Nama yang dicatat adalah <b>pengambil barang</b> (karyawan yang mengambil), dipilih dari master Pengambil Barang.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">IN</div>
+<div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Barang Masuk</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Transaksi penerimaan barang di gudang. Nama yang dicatat adalah <b>penerima</b>, otomatis dari akun penjaga gudang yang sedang login.</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
 <div style="display:inline-block;background:var(--steel-dim);color:var(--steel-bright);padding:3px 10px;border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;margin-bottom:8px;">PIC</div>
 <div style="font-weight:700;font-size:13.5px;margin-bottom:5px;">Person In Charge</div>
-<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Orang penanggung jawab yang mencatat atau melakukan transaksi.</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">Istilah lama untuk orang yang tercatat di transaksi. Di aplikasi ini sudah dipisah: <b>Pengambil Barang</b> untuk OUT dan <b>Penerima</b> (dari akun login) untuk IN. Di data vendor, kolom ini sekarang disebut <b>Kontak Vendor</b>.</div>
 </div>
 
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
@@ -1128,7 +1163,7 @@ Hubungi <b>Admin sistem</b>. Sertakan screenshot layar + pesan error di Console 
 <div class="modal-overlay search-layer" id="search-modal" hidden>
 <div class="modal-box" role="dialog" style="max-width:720px;">
 <div class="modal-head">
-<div><div class="title"><i data-lucide="search"></i> Pencarian Global</div><div class="subtitle">Cari SJ, invoice, vendor, barang, PIC</div></div>
+<div><div class="title"><i data-lucide="search"></i> Pencarian Global</div><div class="subtitle">Cari SJ, invoice, vendor, barang, pengambil</div></div>
 <button class="close" id="search-modal-close" type="button"><i data-lucide="x"></i></button>
 </div>
 <input type="text" class="search-input" id="search-input" placeholder="Ketik untuk mencari..." autocomplete="off" />
@@ -1160,16 +1195,16 @@ Hubungi <b>Admin sistem</b>. Sertakan screenshot layar + pesan error di Console 
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- Konfigurasi Supabase -->
-<script src="js/config.js?v=35"></script>
+<script src="js/config.js?v=36"></script>
 <!-- Koneksi Supabase -->
-<script src="js/supabase.js?v=35"></script>
+<script src="js/supabase.js?v=36"></script>
 <!-- Autentikasi -->
-<script src="js/auth.js?v=35"></script>
+<script src="js/auth.js?v=36"></script>
 <!-- Layer data (DB) -->
-<script src="js/data.js?v=35"></script>
+<script src="js/data.js?v=36"></script>
 <!-- Realtime -->
-<script src="js/realtime.js?v=35"></script>
+<script src="js/realtime.js?v=36"></script>
 <!-- Aplikasi -->
-<script src="js/app.js?v=35"></script>
+<script src="js/app.js?v=36"></script>
 </body>
 </html>

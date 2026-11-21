@@ -50,6 +50,7 @@ Jalankan berurutan di Supabase SQL Editor:
 6. `sql/patch-06-sync-skema.sql` — tabel `vendor_items` + kolom `ukuran`/`jam`
 7. `sql/patch-07-search-path.sql` — `search_path` fungsi SECURITY DEFINER
 8. `sql/patch-08-bucket-privat.sql` — bucket `docs` privat (signed URL)
+9. `sql/patch-09-pengambil-operator.sql` — Operator boleh tambah pengambil + rename riwayat
 
 Lalu buat Admin pertama (lihat catatan di akhir `sql/schema.sql`).
 `sql/reset-data.sql` = mengosongkan data operasional (opsional, hati-hati).

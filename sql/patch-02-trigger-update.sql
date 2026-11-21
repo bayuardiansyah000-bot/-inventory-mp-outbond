@@ -12,6 +12,11 @@ set search_path = public as $$
 declare
   stok_kini int;
 begin
+  -- Lewati validasi bila pemanggil menandai operasi yang tidak mengubah qty
+  -- (mis. rename nama pengambil lewat rename_pic_transaksi).
+  if coalesce(current_setting('app.skip_stok_check', true), '') = 'on' then
+    return new;
+  end if;
   if new.jenis = 'Keluar' then
     select i.stok_awal
       + coalesce((select sum(case when t.jenis='Masuk' then t.jumlah else -t.jumlah end)

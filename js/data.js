@@ -100,7 +100,11 @@ async function dbLoadPic(){
 async function dbInsertPic(p){
   var sb = supabaseClient();
   if(!sb) return { error:{message:"Supabase belum dikonfigurasi"} };
-  return await sb.from("pic").insert({ nama:p.nama, divisi:p.divisi, posisi:p.posisi, aktif:p.aktif!==false });
+  var res = await sb.from("pic").insert({ nama:p.nama, divisi:p.divisi, posisi:p.posisi, aktif:p.aktif!==false });
+  if(res.error && /row-level security|policy/i.test(res.error.message||"")){
+    res.error.message = "Server belum mengizinkan Operator menambah pengambil. Admin perlu menjalankan sql/patch-09-pengambil-operator.sql di Supabase.";
+  }
+  return res;
 }
 
 async function dbUpdatePic(id, p){
@@ -112,7 +116,27 @@ async function dbUpdatePic(id, p){
 async function dbDeletePic(id){
   var sb = supabaseClient();
   if(!sb) return { error:{message:"Supabase belum dikonfigurasi"} };
-  return await sb.from("pic").delete().eq("id", id);
+  var res = await sb.from("pic").delete().eq("id", id);
+  if(res.error && /sudah dipakai di transaksi/i.test(res.error.message||"")){
+    res.error.message = "Pengambil ini sudah dipakai di transaksi OUT. Nonaktifkan saja agar riwayat tetap utuh.";
+  }
+  return res;
+}
+
+// Ganti nama PIC di seluruh transaksi lama (dipakai saat Admin memilih
+// "Ya, Update Semua" ketika mengubah nama pengambil).
+// Memakai RPC `rename_pic_transaksi` supaya satu perintah di server dan
+// hak akses tetap divalidasi (is_admin) di database.
+async function dbRenamePicTransaksi(oldNama, newNama){
+  var sb = supabaseClient();
+  if(!sb) return { error:{message:"Supabase belum dikonfigurasi"} };
+  var res = await sb.rpc("rename_pic_transaksi", { old_nama:oldNama, new_nama:newNama });
+  // Kalau patch SQL belum dijalankan, fungsi RPC tidak ada -> fallback ke update biasa.
+  // Admin tetap boleh update transaksi lewat policy p_transaksi_update.
+  if(res.error && (res.error.code==="PGRST202" || res.error.code==="42883" || /function .*rename_pic_transaksi/i.test(res.error.message||""))){
+    return await sb.from("transaksi").update({ pic:newNama }).eq("pic", oldNama).eq("jenis","Keluar");
+  }
+  return res;
 }
 
 // ---------- BAGIAN ----------
