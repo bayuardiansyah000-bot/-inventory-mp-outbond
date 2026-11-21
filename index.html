@@ -493,11 +493,12 @@ Ringkasan harian kondisi gudang. Berisi:
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
 Tempat mencatat barang <b>masuk</b> (IN) dan <b>keluar</b> (OUT).
 <ul style="margin:8px 0 0 20px;padding:0;">
-<li><b>Form Transaksi</b> — isi: Tanggal, Jenis (IN/OUT), Barang, Bagian Pemakaian (khusus OUT), QTY, PIC, Keterangan.</li>
+<li><b>Form Transaksi</b> — isi: Tanggal, Jam, Jenis (IN/OUT), Barang, Bagian Pemakaian (khusus OUT), QTY, PIC, Keterangan.</li>
+<li><b>Stok Cepat</b> — chip ringkasan stok di atas form; klik untuk langsung memilih barang.</li>
 <li>Sistem akan <b>blokir transaksi OUT</b> kalau stok tidak cukup.</li>
-<li><b>Riwayat Gudang</b> — tabel semua transaksi. Bisa di-filter berdasarkan periode, tipe, barang, PIC, dan bagian. Klik kolom judul untuk urutkan (sort).</li>
-<li>Tombol <b>Edit</b> dan <b>Hapus</b> ada di kolom Aksi. Khusus Operator, Hapus tidak tersedia.</li>
-<li><b>Kelola Bagian</b> — tombol <i data-lucide="settings"></i> di form untuk tambah/ubah nama bagian pemakaian.</li>
+<li><b>Riwayat Gudang</b> — tabel semua transaksi. Bisa di-filter berdasarkan periode, tipe, barang, PIC, dan bagian. Klik kolom judul untuk urutkan (sort). Riwayat ditampilkan 20 baris per halaman.</li>
+<li>Tombol <b>Edit</b> dan <b>Hapus</b> hanya tersedia untuk <b>Admin</b>. Transaksi auto-stock tidak bisa dihapus langsung dari tab ini — untuk mengubah qty, edit SJ di tab Pembelian agar stok ikut tersinkron.</li>
+<li><b>Kelola Bagian</b> — tombol <i data-lucide="settings"></i> di form untuk tambah/ubah nama bagian pemakaian (Admin).</li>
 </ul>
 </div>
 </div>
@@ -508,8 +509,11 @@ Tempat mencatat barang <b>masuk</b> (IN) dan <b>keluar</b> (OUT).
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
 Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
 <ul style="margin:8px 0 0 20px;padding:0;">
-<li><b>Terima Barang</b> — input: tanggal, vendor, no. SJ, upload foto SJ, daftar barang + qty.</li>
-<li>Centang <b>Otomatis tambah stok</b> supaya stok WMS langsung bertambah begitu SJ disimpan.</li>
+<li><b>Terima Barang</b> — input: tanggal, jam, vendor, no. SJ, upload foto SJ (bisa lebih dari 1 file: gambar/PDF), daftar barang + Type/Ukuran + qty.</li>
+<li><b>Type/Ukuran</b> dari daftar barang vendor ikut tersimpan di SJ dan tampil di Riwayat Gudang transaksi auto-stock.</li>
+<li><b>Pratinjau file</b> — klik no. SJ, invoice, atau bukti lunas untuk melihat gambar/PDF, lalu download atau buka di tab baru.</li>
+<li>Centang <b>Otomatis tambah stok</b> supaya stok WMS langsung bertambah begitu SJ disimpan. Kalau tidak dicentang, stok tidak bertambah.</li>
+<li><b>Harga per satuan</b> (mis. per Roll) diisi lewat tombol <b>Edit</b> pada SJ. Total Tagihan = Qty × Harga satuan.</li>
 <li><b>Tagihan Berjalan</b> — SJ yang belum lunas. Statusnya bertahap:
   <ul style="margin:4px 0 0 16px;">
   <li><span style="display:inline-block;width:9px;height:9px;border-radius:999px;background:#F97316;margin-right:6px;"></span>Menunggu Invoice</li>
@@ -519,6 +523,7 @@ Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
 </li>
 <li>Alurnya: <b>+ Input Invoice</b> → <b>→ Kirim ke Finance</b> → <b>Tandai Lunas</b> (upload bukti).</li>
 <li><b>Riwayat Tagihan Selesai</b> — SJ yang sudah lunas, bisa dicari & difilter per bulan.</li>
+<li>Edit/hapus SJ hanya bisa dilakukan <b>Admin</b>. Edit qty SJ akan menyinkronkan transaksi auto-stock (jika SJ dibuat dengan auto-stock aktif).</li>
 </ul>
 </div>
 </div>
@@ -528,9 +533,11 @@ Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
 <div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="building-2"></i> Vendor &amp; Barang</div>
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
 <ul style="margin:8px 0 0 20px;padding:0;">
-<li><b>Tambah / Edit Vendor</b> — isi kode, nama, PIC, HP, alamat. Klik <b>Edit</b> pada tabel vendor → form otomatis terisi & layar scroll ke atas.</li>
+<li><b>Tambah / Edit Vendor</b> — isi kode, nama, PIC, HP, alamat. Klik <b>Edit</b> pada tabel vendor → form otomatis terisi &amp; layar scroll ke atas.</li>
+<li><b>Barang yang Disuplai</b> — tentukan barang yang dijual tiap vendor, plus <b>Type/Ukuran</b> (mis. "50 yard"). Saat input SJ, hanya barang dari daftar ini yang muncul. Kalau vendor belum punya daftar, semua barang tampil sebagai cadangan.</li>
 <li><b>Daftar Vendor</b> — tabel semua vendor, bisa dicari.</li>
 <li><b>Master Barang</b> — tabel semua barang yang dipakai. Klik <b><i data-lucide="settings"></i> Kelola Barang</b> untuk tambah/edit barang atau ubah stok minimum (ROP).</li>
+<li>Tambah/edit/hapus master vendor, barang, dan PIC hanya bisa dilakukan <b>Admin</b>.</li>
 </ul>
 </div>
 </div>
@@ -541,7 +548,8 @@ Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
 <ul style="margin:8px 0 0 20px;padding:0;">
 <li><b>Tambah / Edit PIC</b> — isi nama, divisi, posisi. Centang "Aktif" agar muncul di dropdown saat input transaksi.</li>
-<li><b>Daftar PIC</b> — lihat jumlah transaksi per orang, aktif/nonaktif, dan tombol Edit / Nonaktifkan / Hapus.</li>
+<li><b>Daftar PIC</b> — lihat jumlah transaksi per orang, status aktif/nonaktif, dan tombol Edit / Nonaktifkan.</li>
+<li>Tombol <b>Hapus</b> muncul setelah PIC dinonaktifkan — mencegah PIC yang masih dipakai terhapus. Tambah/edit/hapus PIC hanya untuk <b>Admin</b>.</li>
 <li>PIC yang <b>nonaktif</b> tidak akan muncul di dropdown input transaksi baru, tapi transaksi lama tetap tercatat.</li>
 </ul>
 </div>
@@ -552,6 +560,7 @@ Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
 <div style="font-size:15px;font-weight:700;margin-bottom:8px;"><i data-lucide="bar-chart-3"></i> Laporan</div>
 <div style="font-size:13px;color:var(--ink-muted);line-height:1.7;">
 <ul style="margin:8px 0 0 20px;padding:0;">
+<li>Ada 3 sub-tab: <b>Pemakaian</b>, <b>Pembelian</b>, dan <b>Pembayaran</b>.</li>
 <li>Pilih periode dengan <b>isi manual</b> atau <b>tombol cepat</b> (Hari ini, 7 hari, 30 hari, 90 hari, Bulan ini, Bulan lalu, Tahun ini).</li>
 <li>Klik <b>Tampilkan</b> untuk render laporan.</li>
 <li><b>Rekap per Barang</b> — total IN, OUT, dan rata-rata OUT/hari.</li>
@@ -565,6 +574,8 @@ Mencatat kedatangan barang dari vendor berdasarkan Surat Jalan (SJ).
   </ul>
 </li>
 <li><b>CSV Detail</b> — unduh rekap per barang dalam format Excel.</li>
+<li><b>Sub-tab Pembelian</b> — rekap pembelian per periode + filter vendor, kartu ringkasan, dan tombol <b>CSV</b>.</li>
+<li><b>Sub-tab Pembayaran</b> — rekap SJ yang sudah lunas per periode + filter vendor, kartu ringkasan, dan tombol <b>CSV</b>.</li>
 </ul>
 </div>
 </div>
@@ -626,22 +637,29 @@ Kalau dibuka di HP / tablet layar kecil, sidebar otomatis tersembunyi. Klik ikon
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="clipboard-list"></i> Audit Log</div>
 <div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
-Ada di menu dropdown user (pojok kanan atas). Mencatat semua aksi: <b>Create</b> (tambah), <b>Update</b> (edit), <b>Delete</b> (hapus), <b>Login</b>, <b>Logout</b>. Bisa di-export ke CSV. Hanya Admin yang bisa membersihkan log.
+Ada di menu dropdown user (pojok kanan atas). Mencatat semua aksi: <b>Create</b> (tambah), <b>Update</b> (edit), <b>Delete</b> (hapus), <b>Login</b>, <b>Logout</b>. Bisa di-export ke CSV. Hanya Admin yang bisa melihat dan membersihkan log.
 </div>
 </div>
 
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="bell"></i> Notifikasi Browser</div>
 <div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
-Saat login pertama, muncul dialog izin notifikasi. Kalau diizinkan, kamu dapat pemberitahuan otomatis ketika ada barang di bawah stok minimum — <b>selama aplikasi/tab ini sedang terbuka</b> di browser. Notifikasi <b>tidak muncul saat tab ditutup</b> (butuh fitur lanjutan Service Worker yang belum tersedia).
+Saat login pertama, muncul dialog izin notifikasi. Kalau diizinkan, kamu dapat pemberitahuan otomatis ketika ada barang di bawah stok minimum — <b>selama aplikasi/tab ini sedang terbuka</b>. Untuk notifikasi saat tab ditutup, gunakan Telegram (lihat kartu di samping).
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="send"></i> Notifikasi Telegram</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Notifikasi stok otomatis dikirim ke grup dan chat pribadi setiap <b>08:00 &amp; 18:00 WIB</b> (selalu dikirim, termasuk saat stok aman). Admin bisa mengirim tes lewat tombol <b>Tes Notifikasi</b> di bawah Dark Mode. Bot Telegram juga bisa dipakai untuk cek stok lewat chat.
 </div>
 </div>
 
 <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="users"></i> Role Admin vs Operator</div>
 <div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
-<b>Admin</b> — akses penuh: kelola user, hapus data, kelola master barang/vendor/PIC, lihat audit log.<br>
-<b>Operator</b> — akses terbatas: input & edit transaksi, lihat laporan. Tidak bisa hapus data.
+<b>Admin</b> — akses penuh: kelola user, edit/hapus data, kelola master barang/vendor/PIC, lihat &amp; bersihkan audit log.<br>
+<b>Operator</b> — input transaksi &amp; SJ serta lihat laporan. Edit/hapus transaksi/SJ, kelola master, dan audit log hanya untuk Admin.
 </div>
 </div>
 
@@ -649,6 +667,20 @@ Saat login pertama, muncul dialog izin notifikasi. Kalau diizinkan, kamu dapat p
 <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="lock"></i> Session 8 Jam</div>
 <div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
 Sesi login otomatis berakhir setelah <b>8 jam</b>. Kalau akunmu dinonaktifkan Admin saat sedang login, kamu langsung ter-logout otomatis.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="refresh-cw"></i> Realtime Multi-User</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Perubahan dari user lain (transaksi, SJ, master barang, dan file) otomatis dimuat ulang. Kalau ada pembaruan, muncul notifikasi kecil <b>"Data diperbarui"</b> — tidak perlu refresh manual.
+</div>
+</div>
+
+<div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);">
+<div style="font-weight:700;font-size:13.5px;margin-bottom:6px;"><i data-lucide="user-cog"></i> Kelola User &amp; Ubah Password</div>
+<div style="font-size:12.5px;color:var(--ink-muted);line-height:1.7;">
+Admin bisa tambah, edit, nonaktifkan, atau hapus user lewat menu user (pojok kanan atas) → <b>Kelola User</b>. Semua user bisa mengganti password sendiri lewat <b>Ubah Password Saya</b>.
 </div>
 </div>
 
@@ -805,7 +837,7 @@ setiap transaksi diberi tag <b><i data-lucide="link"></i> auto-stock</b> + refer
 </div>
 <ul style="margin:8px 0 0 20px;padding:0;">
 <li>Transaksi auto-stock <b>tidak bisa dihapus langsung</b> dari tab Transaksi — harus hapus SJ di tab Pembelian.</li>
-<li>Edit qty di SJ → transaksi auto-stock ikut ter-update otomatis.</li>
+<li>Edit qty di SJ → transaksi auto-stock ikut ter-update otomatis — <b>hanya jika</b> SJ dibuat dengan opsi auto-stock dicentang dan transaksi auto-stock-nya masih ada.</li>
 <li>Kalau SJ dihapus → semua transaksi auto-stock terkait <b>ikut terhapus</b>.</li>
 </ul>
 </div>
@@ -844,6 +876,11 @@ Sayangnya <b>belum ada tombol Undo</b>. Data tersimpan permanen di database, jad
 <div style="padding:12px 0;border-bottom:1px solid var(--line);">
 <b style="color:var(--ink);"><i data-lucide="circle-help"></i> Bisa pindah komputer?</b><br>
 Bisa. Data tersimpan di server (database), jadi bisa dibuka dari komputer/HP mana saja — cukup login. Disarankan tetap pakai fitur <b>Export CSV</b> untuk backup laporan berkala.
+</div>
+
+<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+<b style="color:var(--ink);"><i data-lucide="circle-help"></i> Barang datang kurang dari surat jalan, bagaimana inputnya?</b><br>
+Input qty <b>yang benar-benar datang</b> (misal SJ 50 tapi datang 40 → isi 40). Jangan input 50 lalu membuat transaksi OUT sebagai koreksi. Kalau sisa menyusul, minta Admin mengedit SJ dan mengubah qty menjadi total (40 → 50) saat barang susulan tiba — stok ikut bertambah kalau SJ memakai opsi Otomatis tambah stok. Kalau tidak memakai auto-stock, catat barang susulan sebagai transaksi IN. Kalau sisa batal, biarkan 40.
 </div>
 
 <div style="padding:12px 0;">
